@@ -61,7 +61,7 @@
 #include <iomanip>
 #include <fstream>
 #include <cstdlib>
-#include <string>
+#include <cstring>
 #include <limits>
 #include <ctime>
 #include <cmath>
@@ -3564,8 +3564,8 @@ int main(
   _FromInventory = 0; // added v.3.1.7, was previously undefined when no inputfile was provided
   _OUTPUT_pointcloud = 0;  // added v.3.1.7, was previously undefined when no inputfile was provided  
   
-  //  if(strlen(bufi_data) != 0) _FromInventory = 1; // There is a more formal checking of the stream within ReadInputInventory, so this is only to check whether any kind of file/path has been provided, i.e. whether the attempt at initializing from data has been made. But maybe there is a better way of doing this? (and to check: What happens if the string provided in R is NA or NULL? Can we avoid this?)
-  //if(strlen(bufi_pointcloud) != 0) _OUTPUT_pointcloud = 1; // There is a more formal checking of the stream within ReadInputInventory, so this is only to check whether any kind of file/path has been provided, i.e. whether the attempt at initializing from data has been made. But maybe there is a better way of doing this? (and to check: What happens if the string provided in R is NA or NULL? Can we avoid this?)
+  if(strlen(bufi_data) != 0) _FromInventory = 1; // There is a more formal checking of the stream within ReadInputInventory, so this is only to check whether any kind of file/path has been provided, i.e. whether the attempt at initializing from data has been made. But maybe there is a better way of doing this? (and to check: What happens if the string provided in R is NA or NULL? Can we avoid this?)
+  if(strlen(bufi_pointcloud) != 0) _OUTPUT_pointcloud = 1; // There is a more formal checking of the stream within ReadInputInventory, so this is only to check whether any kind of file/path has been provided, i.e. whether the attempt at initializing from data has been made. But maybe there is a better way of doing this? (and to check: What happens if the string provided in R is NA or NULL? Can we avoid this?)
     
   //int main(int argc,char *argv[]) { // now left as comment to recuperate original TROLL version
   
