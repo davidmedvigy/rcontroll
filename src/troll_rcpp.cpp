@@ -3542,32 +3542,15 @@ void AddCrownVolumeLayer(int row_center, int col_center, float height, float CR,
 //'
 //' @export
 // [[Rcpp::export]]
-int main(
-    std::string global_file,
-    std::string climate_file,
-    std::string species_file,
-    std::string day_file,
-    std::string lidar_file,
-    std::string forest_file,
-    std::string output_file
+int main(int argc, char *argv[]
 ) {
-  
-  // From Rcpp acceptable input to TROLL char*
-  bufi = &global_file[0] ;
-  bufi_climate = &climate_file[0] ;
-  bufi_species = &species_file[0] ;
-  bufi_daytimevar = &day_file[0] ;
-  bufi_data = &forest_file[0] ;
-  bufi_pointcloud = &lidar_file[0] ;
-  buf = &output_file[0] ;
   
   _FromInventory = 0; // added v.3.1.7, was previously undefined when no inputfile was provided
   _OUTPUT_pointcloud = 0;  // added v.3.1.7, was previously undefined when no inputfile was provided  
   
-  if(strlen(bufi_data) != 0) _FromInventory = 1; // There is a more formal checking of the stream within ReadInputInventory, so this is only to check whether any kind of file/path has been provided, i.e. whether the attempt at initializing from data has been made. But maybe there is a better way of doing this? (and to check: What happens if the string provided in R is NA or NULL? Can we avoid this?)
-  if(strlen(bufi_pointcloud) != 0) _OUTPUT_pointcloud = 1; // There is a more formal checking of the stream within ReadInputInventory, so this is only to check whether any kind of file/path has been provided, i.e. whether the attempt at initializing from data has been made. But maybe there is a better way of doing this? (and to check: What happens if the string provided in R is NA or NULL? Can we avoid this?)
+  //if(strlen(bufi_data) != 0) _FromInventory = 1; // There is a more formal checking of the stream within ReadInputInventory, so this is only to check whether any kind of file/path has been provided, i.e. whether the attempt at initializing from data has been made. But maybe there is a better way of doing this? (and to check: What happens if the string provided in R is NA or NULL? Can we avoid this?)
+  //if(strlen(bufi_pointcloud) != 0) _OUTPUT_pointcloud = 1; // There is a more formal checking of the stream within ReadInputInventory, so this is only to check whether any kind of file/path has been provided, i.e. whether the attempt at initializing from data has been made. But maybe there is a better way of doing this? (and to check: What happens if the string provided in R is NA or NULL? Can we avoid this?)
     
-  //int main(int argc,char *argv[]) { // now left as comment to recuperate original TROLL version
   
   //!*********************
   //!** Initializations **
@@ -3582,41 +3565,41 @@ int main(
 #endif
   easympi_rank = 0;
   
-  // for(int argn=1;argn<argc;argn++){ // Arguments of the input and output files
-  //   if(*argv[argn] == '-'){
-  //     switch(*(argv[argn]+1)){
-  //     case 'i':
-  //       bufi = argv[argn]+2;
-  //       break;
-  //     case 'd':                       // new v.3.0; initialisation of daytime variation in a separate file ('d' for daytime variation)
-  //       bufi_daytimevar = argv[argn]+2;
-  //       break;
-  //     case 'm':                       // new v.2.4; initialisation of climate parameters from separate file ('m' for meterology)
-  //       bufi_climate = argv[argn]+2;
-  //       break;
+  for(int argn=1;argn<argc;argn++){ // Arguments of the input and output files
+    if(*argv[argn] == '-'){
+      switch(*(argv[argn]+1)){
+      case 'i':
+	bufi = argv[argn]+2;
+	break;
+      case 'd':                       // new v.3.0; initialisation of daytime variation in a separate file ('d' for daytime variation)
+	bufi_daytimevar = argv[argn]+2;
+	break;
+      case 'm':                       // new v.2.4; initialisation of climate parameters from separate file ('m' for meterology)
+	bufi_climate = argv[argn]+2;
+	break;
   //     case 'p':                       // new v.3.0; initialisation of soil parameters from separate file ('p' for pedology)
   //       bufi_soil = argv[argn]+2;
   //       break;
-  //     case 's':                       // new v.3.0; initialisation of species parameters from separate file
-  //       bufi_species = argv[argn]+2;
-  //       break;
-  //     case 'o':
-  //       buf = argv[argn]+2;
-  //       break;
-  //     case 'f':                      // new v.2.3: initialisation from field, 'f' for "forest", "field data"
-  //       bufi_data = argv[argn]+2;
-  //       _FromInventory = 1;        // new v.3.1: automatic recognition of whether data sheet is provided or not
-  //       break;
-  //     case 'l':
-  //       bufi_pointcloud = argv[argn]+2;  // new v.3.1.6: output of simulated point clouds for TROLL-created stands
-  //       _OUTPUT_pointcloud = 1;
-  //       break;
+      case 's':                       // new v.3.0; initialisation of species parameters from separate file
+	bufi_species = argv[argn]+2;
+	break;
+      case 'o':
+	buf = argv[argn]+2;
+	break;
+      case 'f':                      // new v.2.3: initialisation from field, 'f' for "forest", "field data"
+	bufi_data = argv[argn]+2;
+	_FromInventory = 1;        // new v.3.1: automatic recognition of whether data sheet is provided or not
+	break;
+      case 'l':
+	bufi_pointcloud = argv[argn]+2;  // new v.3.1.6: output of simulated point clouds for TROLL-created stands
+	_OUTPUT_pointcloud = 1;
+	break;
   //     case 'n':
   //       easympi_rank=atoi(argv[argn]+2); // new v.2.2
-  //     }
-  //   }
-  // }
-
+      }
+    }
+  }
+    
   // input files
   snprintf(inputfile,sizeof(inputfile),"%s",bufi);
   snprintf(inputfile_daytimevar,sizeof(inputfile_daytimevar),"%s",bufi_daytimevar);
@@ -3625,7 +3608,7 @@ int main(
   // #ifdef WATER //GS debugging Feb2023: (Added inputfile_soil not defined)
   //   snprintf(inputfile_soil,sizeof(inputfile_soil),"%s",bufi_soil); 
   // #endif
-  
+
   if(_OUTPUT_pointcloud == 1){
     snprintf(inputfile_pointcloud,sizeof(inputfile_pointcloud),"%s",bufi_pointcloud); // v.3.1.6
   }
