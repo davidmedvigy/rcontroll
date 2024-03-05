@@ -580,6 +580,7 @@ public:
   float s_regionalfreq;   //!< Regional frequency; v.3.0 !!!UPDATE
   float s_drymass;        //!< Drymass; v.3.0  !!!UPDATE
   float s_seedmass;       //!< Seed mass (g); See Baraloto & Forget 2007 dataset v.2.3; deprecated in v.2.2, but still necessary for SEEDTRADEOFF
+  float s_growthform;     //!< Growth form. Tree=0. Liana=1.
   float s_iseedmass;      //!< Inverse of seed mass (1/g), v.2.3
   //float s_output_field[12];         // scalar output fields, deprecated since v.3.1, replaced by actual sumstats for readability/code accessibility
   float s_sum1, s_sum10, s_sum30, s_ba, s_ba10, s_agb, s_gpp, s_npp, s_rday, s_rnight, s_rstem, s_litterfall; // species level summary statistics, to be provided to output streams
@@ -606,6 +607,7 @@ public:
     s_nbind=0;
     s_nbind10=0;
     s_nbind30=0;
+    s_growthform=0;
   };
   
   void Init();
@@ -905,6 +907,23 @@ public:
 
 vector<Tree> T; //!< Definition of a vector of the Tree class
 
+
+//###########################################
+//! Liana class
+//############################################
+
+class Liana {
+public:
+  int l_site;           //!< Geolocation of the liana
+
+  //! Function constructor Liana()
+  Liana(){
+    //t_from_Data = 0;
+  };
+};
+
+vector<Liana> L; //!< Definition of a vector of the Liana class
+    
 //#############################################
 // Tree birth
 //#############################################
@@ -3994,6 +4013,8 @@ void AssignValueSpecies(Species &S, string parameter_name, string parameter_valu
     SetParameter(parameter_name, parameter_value, S.s_tlp, -10.0f, 0.0f, -2.0f, quiet);
   } else if(parameter_name == "s_drymass"){
     SetParameter(parameter_name, parameter_value, S.s_drymass, 0.0f, 100.0f, 0.5f, quiet);
+  } else if(parameter_name == "s_growthform"){
+    SetParameter(parameter_name, parameter_value, S.s_growthform, 0.0f, 1.0f, 0.0f, quiet);
   }
 }
 
@@ -4123,10 +4144,10 @@ void ReadInputSpecies(){
   cout << endl << "Reading in file: " << inputfile_species << endl;
   fstream InSpecies(inputfile_species, ios::in);
   if(InSpecies){
-    // possible parameters to initialise vector<string> parameter_names{"s_name","s_LMA","s_Nmass","s_Pmass","s_wsg","s_dbhmax","s_hmax","s_ah","s_seedmass","s_regionalfreq","s_tlp","s_drymass"};
+    // possible parameters to initialise vector<string> parameter_names{"s_name","s_LMA","s_Nmass","s_Pmass","s_wsg","s_dbhmax","s_hmax","s_ah","s_seedmass","s_regionalfreq","s_tlp","s_drymass","s_growthform"};
     //        int nb_parameters = int(parameter_names.size()); only works from C++11 onwards
-    string parameter_names[12] = {"s_name","s_LMA","s_Nmass","s_Pmass","s_wsg","s_dbhmax","s_hmax","s_ah","s_seedmass","s_regionalfreq","s_tlp","s_drymass"};
-    int nb_parameters = 12;
+    string parameter_names[13] = {"s_name","s_LMA","s_Nmass","s_Pmass","s_wsg","s_dbhmax","s_hmax","s_ah","s_seedmass","s_regionalfreq","s_tlp","s_drymass","s_growthform"};
+    int nb_parameters = 13;
     
     // first get parameter names
     string line;
@@ -4831,6 +4852,13 @@ void Initialise() {
       cout << "t_root biomass adresses: " << &T_site.t_root_biomass[0] << "\t" << &T_site.t_root_biomass[1] << "\t" << &T_site.t_root_biomass[2] << "\t" << &T_site.t_root_biomass[3] << "\t" << &T_site.t_root_biomass[4] << endl;
     }
 #endif
+  }
+  //** Initialization of lianas **
+  //*****************************
+  L.reserve(sites);
+  for(int site = 0; site < sites; site++){
+    Liana L_site;
+    L.push_back(L_site);
   }
   InitialiseIntraspecific();
   InitialiseLookUpTables();
