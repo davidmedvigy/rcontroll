@@ -912,14 +912,31 @@ vector<Tree> T; //!< Definition of a vector of the Tree class
 //! Liana class
 //############################################
 
+class LianaStem{
+public:
+  Tree *ls_host;
+  Tree ls_t;
+
+  LianaStem(){
+    ls_host=NULL;
+  };
+};
+
+
 class Liana {
 public:
   int l_site;           //!< Geolocation of the liana
+  float l_age; /* age of liana; inaccurate if liana wa initialized from user data */
 
+  std::vector<LianaStem> l_stem;
+  
   //! Function constructor Liana()
   Liana(){
-    //t_from_Data = 0;
+    l_age=0;
+    l_stem.clear();
   };
+
+  void CalcLAI();
 };
 
 vector<Liana> L; //!< Definition of a vector of the Liana class
@@ -1678,6 +1695,13 @@ void Tree::CalcLAI() {
   }
 }
 #endif
+
+void Liana::CalcLAI(){
+  if(l_age > 0){
+    for(int ihost=0;ihost<l_stem.size();ihost++){
+    }
+  }
+}
 
 #ifdef WATER
 
