@@ -1697,8 +1697,16 @@ void Tree::CalcLAI() {
 #endif
 
 void Liana::CalcLAI(){
+// Calculate LAI for a Liana. Note that a liana can have multiple aboveground stems.
   if(l_age > 0){
-    for(int ihost=0;ihost<l_stem.size();ihost++){
+    // Loop over all the aboveground stems.
+    for(int istem=0;istem<l_stem.size();istem++){
+      // If the liana stem has colonized a host, the plan is for the liana stem's crown
+      // dimensions to exactly match those of the host. Note that the following will
+      // need to be properly defined:
+      //     t_site, t_CrownDisplacement, t_height, t_CD, t_CR, t_fraction_filled
+      // These variables also need to be defined if the liana is free-standing.
+      l_stem[istem].ls_t.CalcLAI();
     }
   }
 }
