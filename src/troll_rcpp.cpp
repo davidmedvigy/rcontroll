@@ -363,6 +363,8 @@ unsigned int *n_species(0); //!< Global vector: number of seeds assigned to each
 int    *SPECIES_GERM (0); //!< Global vector: !!!TO_DOCUMENT
 float  *PROB_S (0); //!< Global vector: !!!TO_DOCUMENT _SEEDTRADEOFF
 
+int *LIANA_PRESENCE(0); //!< Global vector: indicates whether a Liana or LianaStem is occupying a site.
+
 // point cloud output, v.3.1.6
 float mean_beam_pc; // the mean number of shots per m2 for the point cloud sampling
 float sd_beam_pc;   // the standard deviation of the shots per m2 for the point cloud sampling
@@ -916,8 +918,10 @@ class LianaStem{
 public:
   Tree *ls_host;
   Tree ls_t;
-
+  int ls_site;
+  
   LianaStem(){
+    ls_site=0;
     ls_host=NULL;
   };
 };
@@ -933,10 +937,12 @@ public:
   //! Function constructor Liana()
   Liana(){
     l_age=0;
+    l_site=0;
     l_stem.clear();
   };
 
   void CalcLAI();
+  void Birth(int, int);
 };
 
 vector<Liana> L; //!< Definition of a vector of the Liana class
@@ -1075,6 +1081,8 @@ void Tree::Birth(int nume, int site0) {
   }
 }
 #else
+void Liana::Birth(int nume, int site0) {
+}
 void Tree::Birth(int nume, int site0) {
   nblivetrees++;
   t_site = site0;
@@ -5254,6 +5262,7 @@ void AllocMem() {
 #endif
       if(NULL==(SPECIES_GERM=new int[nbspp+1])) cerr<<"!!! Mem_Alloc\n";  // Field for democratic seed germination
       if(NULL==(SPECIES_SEEDS=new int*[sites]))  cerr<<"!!! Mem_Alloc\n"; // Field of seeds
+      if(NULL==(LIANA_PRESENCE=new int[sites])) cerr<<"!!! Mem_Alloc\n";  // Field for indicating liana presence.
       for(int site=0;site<sites;site++){                          // For each processor, we define a stripe above (labelled 0) and a stripe below (1). Each stripe is SBORD in width.
         if (NULL==(SPECIES_SEEDS[site]=new int[nbspp+1]))       // ALL the sites need to be updated.
           cerr<<"!!! Mem_Alloc\n";
@@ -5699,7 +5708,8 @@ void FillSeed(int col, int row, int spp) {
 //#############################
 void RecruitTree(){
   for(int site=0;site<sites;site++) {  //**** Local germination ****
-    if(T[site].t_age == 0.0) {
+    if(T[site].t_age == 0.0 && LIANA_PRESENCE[site] == 0) { // No trees, no lianas at site. I need to remember to
+      // define LIANA_PRESENCE when I add a liana.
       int spp_withseeds = 0;
       for(int spp=1;spp<=nbspp;spp++){  // lists all the species with a seed present at given site...
         if(SPECIES_SEEDS[site][spp] > 0) {
@@ -5724,7 +5734,12 @@ void RecruitTree(){
 #else
         // If enough light, germination, initialization of NPP (LCP is the species light compensation point
         // here, light is the sole environmental resources tested as a limiting factor for germination, but we should think about adding nutrients (N,P) and water conditions...
-        if(flux>(S[spp].s_LCP))  T[site].Birth(spp,site);
+        if(flux>(S[spp].s_LCP)){
+	  if(S[spp].s_growthform==0){
+	    T[site].Birth(spp,site);
+	  }else{
+	    L[site].Birth(spp,site);
+	  }
 #endif
 #endif
       }
@@ -8436,6 +8451,7 @@ void FreeMem () {
   delete [] nbdbh;
   delete [] layer;
   delete [] SPECIES_GERM;
+  delete [] LIANA_PRESENCE;
 #ifdef WATER
   delete [] site_DCELL;
 #endif
