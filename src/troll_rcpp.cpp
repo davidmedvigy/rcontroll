@@ -5433,6 +5433,11 @@ void UpdateSeeds() {
         if(T[site].t_dbh >= T[site].t_dbhmature) trees_mature++;
         T[site].DisperseSeed();
       }
+      if(L[site].l_age){
+	for(int istem=0;istem<L[site].l_stem.size();istem++){
+	  L[site].l_stem[istem].ls_t.DisperseSeed();
+	}
+      }
     }
     
     int nbspecies_affected = 0;
