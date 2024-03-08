@@ -6137,7 +6137,11 @@ void OutputSnapshot(fstream& output, bool header, float dbh_limit){
   for(int site=0;site<sites;site++){                                    // Each tree contribues to LAI3D
     T[site].CalcLAI();
   }
-  
+
+  for(int site=0;site<sites;site++){                                    // Each liana contribues to LAI3D
+    L[site].CalcLAI();
+  }
+
   for(int h=HEIGHT;h>0;h--){                                 // LAI is computed by summing LAI from the canopy top to the ground
     for(int site=0;site<sites;site++){
       int sbsite=site+SBORD;
