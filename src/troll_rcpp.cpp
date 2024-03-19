@@ -5577,8 +5577,11 @@ void UpdateField() {
   for(int h=0;h<(HEIGHT+1);h++)
     for(int sbsite=0;sbsite<sites+2*SBORD;sbsite++)
       LAI3D[h][sbsite] = 0.0;
-  for(int site=0;site<sites;site++) T[site].CalcLAI(); // Each tree contribues to LAI3D
-  
+  for(int site=0;site<sites;site++){
+    T[site].CalcLAI(); // Each tree contribues to LAI3D
+    L[site].CalcLAI();
+  }
+    
   for(int h=HEIGHT;h>0;h--){ // LAI is computed by summing LAI from the canopy top to the ground
     for(int site=0;site<sites;site++){
       int sbsite=site+SBORD;
