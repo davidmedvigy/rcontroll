@@ -5864,14 +5864,14 @@ void TriggerTreefallSecondary(){
     }
     if(L[site].l_age){ // Loop over lianas as well
       for(int istem=0;istem<L[site].l_stem.size();istem++){ // loop over the LianaStem
-	if(L[site].l_stem.ls_host==NULL){ // free-standing LianaStem
+	if(L[site].l_stem[istem].ls_host==NULL){ // free-standing LianaStem
 	  float height_threshold = L[site].l_stem[istem].ls_t.t_height/L[site].l_stem[istem].ls_t.t_mult_height;  // since 2.5: a tree's stability is defined by its species' average height, i.e. we divide by the intraspecific height multiplier to account for lower stability in quickly growing trees; otherwise slender, faster growing trees would be treated preferentially and experience less secondary treefall than more heavily built trees
-	  if(2.0*L[site].l_stem[istem].ls_t..t_hurt*gsl_rng_uniform(gslrng) > height_threshold) {        // check whether tree dies: probability of death is 1.0-0.5*t_height/t_hurt, so gslrng <= 1.0 - 0.5 * t_height/t_hurt, or gslrng > 0.5 * t_height/t_hurt; modified in v.2.5: probability of death is 1.0 - 0.5*t_height/(t_mult_height * t_hurt), so the larger the height deviation (more slender), the higher the risk of being thrown by another tree
+	  if(2.0*L[site].l_stem[istem].ls_t.t_hurt*gsl_rng_uniform(gslrng) > height_threshold) {        // check whether tree dies: probability of death is 1.0-0.5*t_height/t_hurt, so gslrng <= 1.0 - 0.5 * t_height/t_hurt, or gslrng > 0.5 * t_height/t_hurt; modified in v.2.5: probability of death is 1.0 - 0.5*t_height/(t_mult_height * t_hurt), so the larger the height deviation (more slender), the higher the risk of being thrown by another tree
 	    if(p_tfsecondary > gsl_rng_uniform(gslrng)){                              // check whether tree falls or dies otherwise
 	      float angle = float(twoPi*gsl_rng_uniform(gslrng));                    // random angle
 	      L[site].l_stem[istem].ls_t.Treefall(angle,0);
 	    }
-	    L[site].l_stem.erase(l_stem.begin()+istem);
+	    L[site].l_stem.erase(L[site].l_stem.begin()+istem);
 	  } else {
 	    L[site].l_stem[istem].ls_t.t_hurt = short(hurt_decay * float(L[site].l_stem[istem].ls_t.t_hurt));                                // reduction of t_hurt according to hurt_decay, could be moved to Tree::Growth() function and made dependent on the tree's carbon gain
 	  }
