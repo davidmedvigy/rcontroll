@@ -922,9 +922,11 @@ public:
   
   LianaStem(){
     ls_site=0;
-    
     ls_host=NULL;
   };
+
+  void Birth(int, int);
+
 };
 
 
@@ -1089,6 +1091,12 @@ void Tree::Birth(int nume, int site0) {
   }
 }
 
+void LianaStem::Birth(int nume, int site0){
+  ls_host=NULL; // starts out as free-standing
+  ls_site=site0; // First LianaStem occupies the same site as its Liana
+  ls_t.Birth(nume,site0);
+}
+
 void Liana::Birth(int nume, int site0) {
   //######################
   //# first test LAImax ##
@@ -1099,14 +1107,15 @@ void Liana::Birth(int nume, int site0) {
   
   if(LAI3D[0][site0+SBORD] < LAImax_precomputed){
     l_site = site0;
+    LIANA_PRESENCE[l_site] = 1;
     l_sp_lab = nume;
-    S[l_sp_lab].s_nbind++;
     l_age=1.;
     l_NPPneg=0;
     l_from_Data=0;
     l_stem.clear();
     int nstem=1;
     l_stem.resize(nstem);
+    l_stem[0].Birth(nume,site0);
   }
 }
 
