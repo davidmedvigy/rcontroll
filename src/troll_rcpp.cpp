@@ -952,6 +952,10 @@ vector<Liana> L; //!< Definition of a vector of the Liana class
 //#############################################
 //! Actions needed at birth for a tree (precisely, at time when a stem enters the > 1 cm trunk diameter class)
 #ifdef LCP_alternative
+
+void Liana::Birth(int nume, int site0) {
+}
+
 //! reformulation of birth process: light environment is checked within birth function, based on precomputed array of LAImax
 void Tree::Birth(int nume, int site0) {
   //######################
@@ -5725,7 +5729,11 @@ void RecruitTree(){
         int spp = SPECIES_GERM[spp_index];
         // otherwise all species with seeds present are equiprobable
 #ifdef LCP_alternative
-        T[site].Birth(spp,site); // in this version, the light environment is checked within Birth() function
+	if(S[spp].s_growthform==0){
+	  T[site].Birth(spp,site); // in this version, the light environment is checked within Birth() function
+	}else{
+	  L[site].Birth(spp,site);
+	}
 #else
         float flux = WDailyMean*exp(-fmaxf(LAI3D[0][site+SBORD],0.0)*kpar);
 #ifdef WATER
