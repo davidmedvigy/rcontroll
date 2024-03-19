@@ -855,7 +855,7 @@ public:
   //!< - For plastic and shy crowns, moved inside allocation step, otherwise computed straight after other update functions
   
   void DisperseSeed();            //!< Seed dispersal, called by UpdateField
-  void Treefall(float angle);     //!< Tree falling function, called by TriggerTreefall
+  void Treefall(float angle, int deathflag);     //!< Tree falling function, called by TriggerTreefall
   void Update();                  //!< Tree death and growth
   void Average();                 //!< Local computation of the averages
   void CalcLAI();                 //!< Update of the LAI3D field
@@ -3089,7 +3089,10 @@ void Tree::Update() {
 //! - Tree falling routine, formerly FallTree(),  _BASICTREEFALL, changed in v.2.4.0
 //! - Creates a treefall (but no longer treefall probability). Takes angle as argument and can now be used for primary, secondary treefalls, forestry, or other disturbances
 //! - NEW in TROLL v.2.4: FallTree() function has become Treefall() function, calculation of angle and treefall outside of function, and damages are now added up from several treefalls
-void Tree::Treefall(float angle) {
+//! - With lianas, I added a new input argument, deathflag. This flag specifies whether or not to call Death. This
+//!   call should be made for trees, but not for LianaStem. Memory associated with LianaStem is handled differently
+//!   and should be done outside this function.
+void Tree::Treefall(float angle, int deathflag) {
   // treefall statistics
   nbTreefall1++;
 #ifdef Output_ABC
@@ -3132,7 +3135,7 @@ void Tree::Treefall(float angle) {
     }
   }
   // v.2.4.0: outputs have been moved to Death() function
-  Death();
+  if(deathflag==1)Death();
 }
 
 //####################################################
@@ -5809,7 +5812,7 @@ void TriggerTreefall(){
       }
       // above a given stress threshold the tree falls
       if(c_forceflex > T[site].t_Ct){
-        T[site].Treefall(angle);
+        T[site].Treefall(angle,1);
       }
     }
 #ifdef MPI
@@ -5851,12 +5854,28 @@ void TriggerTreefallSecondary(){
       if(2.0*T[site].t_hurt*gsl_rng_uniform(gslrng) > height_threshold) {        // check whether tree dies: probability of death is 1.0-0.5*t_height/t_hurt, so gslrng <= 1.0 - 0.5 * t_height/t_hurt, or gslrng > 0.5 * t_height/t_hurt; modified in v.2.5: probability of death is 1.0 - 0.5*t_height/(t_mult_height * t_hurt), so the larger the height deviation (more slender), the higher the risk of being thrown by another tree
         if(p_tfsecondary > gsl_rng_uniform(gslrng)){                              // check whether tree falls or dies otherwise
           float angle = float(twoPi*gsl_rng_uniform(gslrng));                    // random angle
-          T[site].Treefall(angle);
+          T[site].Treefall(angle,1);
         } else {
           T[site].Death();
         }
       } else {
         T[site].t_hurt = short(hurt_decay * float(T[site].t_hurt));                                // reduction of t_hurt according to hurt_decay, could be moved to Tree::Growth() function and made dependent on the tree's carbon gain
+      }
+    }
+    if(L[site].l_age){ // Loop over lianas as well
+      for(int istem=0;istem<L[site].l_stem.size();istem++){ // loop over the LianaStem
+	if(L[site].l_stem.ls_host==NULL){ // free-standing LianaStem
+	  float height_threshold = L[site].l_stem[istem].ls_t.t_height/L[site].l_stem[istem].ls_t.t_mult_height;  // since 2.5: a tree's stability is defined by its species' average height, i.e. we divide by the intraspecific height multiplier to account for lower stability in quickly growing trees; otherwise slender, faster growing trees would be treated preferentially and experience less secondary treefall than more heavily built trees
+	  if(2.0*L[site].l_stem[istem].ls_t..t_hurt*gsl_rng_uniform(gslrng) > height_threshold) {        // check whether tree dies: probability of death is 1.0-0.5*t_height/t_hurt, so gslrng <= 1.0 - 0.5 * t_height/t_hurt, or gslrng > 0.5 * t_height/t_hurt; modified in v.2.5: probability of death is 1.0 - 0.5*t_height/(t_mult_height * t_hurt), so the larger the height deviation (more slender), the higher the risk of being thrown by another tree
+	    if(p_tfsecondary > gsl_rng_uniform(gslrng)){                              // check whether tree falls or dies otherwise
+	      float angle = float(twoPi*gsl_rng_uniform(gslrng));                    // random angle
+	      L[site].l_stem[istem].ls_t.Treefall(angle,0);
+	    }
+	    L[site].l_stem.erase(l_stem.begin()+istem);
+	  } else {
+	    L[site].l_stem[istem].ls_t.t_hurt = short(hurt_decay * float(L[site].l_stem[istem].ls_t.t_hurt));                                // reduction of t_hurt according to hurt_decay, could be moved to Tree::Growth() function and made dependent on the tree's carbon gain
+	  }
+	}
       }
     }
   }
