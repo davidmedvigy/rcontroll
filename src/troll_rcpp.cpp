@@ -922,6 +922,7 @@ public:
   
   LianaStem(){
     ls_site=0;
+    
     ls_host=NULL;
   };
 };
@@ -931,13 +932,19 @@ class Liana {
 public:
   int l_site;           //!< Geolocation of the liana
   float l_age; /* age of liana; inaccurate if liana wa initialized from user data */
-
+  int l_sp_lab;
+  int l_NPPneg;
+  unsigned short l_from_Data;
+  
   std::vector<LianaStem> l_stem;
   
   //! Function constructor Liana()
   Liana(){
     l_age=0;
     l_site=0;
+    l_sp_lab=0;
+    l_NPPneg=0;
+    l_from_Data=0;
     l_stem.clear();
   };
 
@@ -952,9 +959,6 @@ vector<Liana> L; //!< Definition of a vector of the Liana class
 //#############################################
 //! Actions needed at birth for a tree (precisely, at time when a stem enters the > 1 cm trunk diameter class)
 #ifdef LCP_alternative
-
-void Liana::Birth(int nume, int site0) {
-}
 
 //! reformulation of birth process: light environment is checked within birth function, based on precomputed array of LAImax
 void Tree::Birth(int nume, int site0) {
@@ -1084,6 +1088,28 @@ void Tree::Birth(int nume, int site0) {
 #endif
   }
 }
+
+void Liana::Birth(int nume, int site0) {
+  //######################
+  //# first test LAImax ##
+  //######################
+  int dev_rand = int(gsl_rng_uniform_int(gslrng,10000));    // modified FF v.3.1.5 (reduced to 10000)
+  int index_LAImax = dev_rand + (nume - 1) * 10000;
+  float LAImax_precomputed = LookUpLAImax[index_LAImax];
+  
+  if(LAI3D[0][site0+SBORD] < LAImax_precomputed){
+    l_site = site0;
+    l_sp_lab = nume;
+    S[l_sp_lab].s_nbind++;
+    l_age=1.;
+    l_NPPneg=0;
+    l_from_Data=0;
+    l_stem.clear();
+    int nstem=1;
+    l_stem.resize(nstem);
+  }
+}
+
 #else
 void Liana::Birth(int nume, int site0) {
 }
