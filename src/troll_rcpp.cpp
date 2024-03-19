@@ -971,7 +971,7 @@ void Tree::Birth(int nume, int site0) {
   int index_LAImax = dev_rand + (nume - 1) * 10000;
   float LAImax_precomputed = LookUpLAImax[index_LAImax];
   
-  if(LAI3D[0][site0+SBORD] < LAImax_precomputed){
+  if(LAI3D[0][site0+SBORD] < LAImax_precomputed || LIANA_PRESENCE[site0]==1){
     nblivetrees++;
     t_site = site0;
     t_sp_lab = nume;
