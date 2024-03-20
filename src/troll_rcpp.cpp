@@ -5801,7 +5801,7 @@ void RecruitTree(){
 //#############################
 //! change in v.2.4: resetting Thurt[0] field is done in TriggerSecondaryTreefall() at the beginning of each iteration. Further changes: rewriting of Tree::FallTree() which is now Tree::Treefall(angle). t_hurt can now persist longer, so new treefall events are added to older damages (that, in turn are decaying)
 void TriggerTreefall(){
-  for(int site=0;site<sites;site++)
+  for(int site=0;site<sites;site++){
     if(T[site].t_age) {
       // treefall is triggered given a certain flexural force
       // _BASICTREEFALL: just dependent on height threshold + random uniform distribution
@@ -5813,22 +5813,57 @@ void TriggerTreefall(){
       // above a given stress threshold the tree falls
       if(c_forceflex > T[site].t_Ct){
         T[site].Treefall(angle,1);
+	// See if any LianaStem are associated with this tree, and kill them. This search
+	// algorithm can certainly be improved.
+	for(int lsite=0;lsite<sites;lsite++){ // loop over sites
+	  if(L[lsite].l_age){ // find lianas
+	    for(int lstem=0;lstem<L[lsite].l_stem.size();lstem++){ // loop over LianaStem
+	      if(L[lsite].l_stem[lstem].ls_host != NULL){ // make sure it is not free-standing
+		if(L[lsite].l_stem[lstem].ls_host->t_site==site){ // colonizing the tree at this site
+		  L[lsite].l_stem.erase(L[lsite].l_stem.begin()+lstem);
+		}
+	      }
+	    }
+	  }
+	}
       }
     }
-#ifdef MPI
-    // Treefall field passed to the n.n. procs
-    MPI_ShareTreefall(Thurt, sites);
-#endif
-    for(int site=0;site<sites;site++){
-      // Update of Field hurt
-      if(T[site].t_age) {
-        T[site].t_hurt = max(Thurt[0][site+sites],T[site].t_hurt);                 // NEW in v.2.4: addition of damages, alternative: max()
-#ifdef MPI
-        if(mpi_rank) T[site].t_hurt = max(T[site].t_hurt,Thurt[1][site]);               // ? v.2.4: Update needed, Thurt[1], why max?
-        if(mpi_rank<mpi_size-1) T[site].t_hurt = max(T[site].t_hurt,Thurt[2][site]);
-#endif
+
+    if(L[site].l_age) {
+      for(int istem=0;istem<L[site].l_stem.size();istem++){ // loop over the LianaStem
+	if(L[site].l_stem[istem].ls_host==NULL){ // free-standing LianaStem
+	  // treefall is triggered given a certain flexural force
+	  // _BASICTREEFALL: just dependent on height threshold + random uniform distribution
+	  float angle = 0.0, c_forceflex = 0.0;
+	  if(_BASICTREEFALL){
+	    c_forceflex = gsl_rng_uniform(gslrng)*L[site].l_stem[istem].ls_t.t_height;     // probability of treefall = 1-t_Ct/t_height, compare to gsl_rng_uniform(gslrng): gsl_rng_uniform(gslrng) < 1 - t_Ct/t_height, or: gsl_rng_uniform(gslrng) > t_Ct/t_height
+	    angle = float(twoPi*gsl_rng_uniform(gslrng));                    // random angle
+	  }
+	  // above a given stress threshold the tree falls
+	  if(c_forceflex > L[site].l_stem[istem].ls_t.t_Ct){
+	    L[site].l_stem.erase(L[site].l_stem.begin()+istem);
+	  }else{
+	    L[site].l_stem[istem].ls_t.t_hurt=max(Thurt[0][site+sites],L[site].l_stem[istem].ls_t.t_hurt);
+	  }
+	}
       }
     }
+
+  }
+#ifdef MPI
+  // Treefall field passed to the n.n. procs
+  MPI_ShareTreefall(Thurt, sites);
+#endif
+  for(int site=0;site<sites;site++){
+    // Update of Field hurt
+    if(T[site].t_age) {
+      T[site].t_hurt = max(Thurt[0][site+sites],T[site].t_hurt);                 // NEW in v.2.4: addition of damages, alternative: max()
+#ifdef MPI
+      if(mpi_rank) T[site].t_hurt = max(T[site].t_hurt,Thurt[1][site]);               // ? v.2.4: Update needed, Thurt[1], why max?
+      if(mpi_rank<mpi_size-1) T[site].t_hurt = max(T[site].t_hurt,Thurt[2][site]);
+#endif
+    }
+  }
 }
 
 //#############################
