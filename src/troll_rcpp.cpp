@@ -7006,6 +7006,11 @@ void UpdateMovingAveragesABC(){
       GPP_abc += T[site].t_GPP*1.0e-6;
       litter_abc += T[site].t_litter*1.0e-6;
       if(T[site].t_dbh >= 0.1) nbtrees_abc++;
+      for(int istem=0;istem<L[site].l_stem.size();istem++){
+	GPP_abc += L[site].l_stem[istem].ls_t.t_GPP*1.0e-6;
+	litter_abc += L[site].l_stem[istem].ls_t.t_litter*1.0e-6;
+	if(L[site].l_stem[istem].ls_t.t_dbh >= 0.1) nbtrees_abc++;
+      }
     }
   }
   
