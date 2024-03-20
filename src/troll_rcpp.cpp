@@ -5858,6 +5858,21 @@ void TriggerTreefallSecondary(){
         } else {
           T[site].Death();
         }
+
+	// See if any LianaStem are associated with this tree, and kill them. This search
+	// algorithm can certainly be improved.
+	for(int lsite=0;lsite<sites;lsite++){ // loop over sites
+	  if(L[lsite].l_age){ // find lianas
+	    for(int lstem=0;lstem<L[lsite].l_stem.size();lstem++){ // loop over LianaStem
+	      if(L[lsite].l_stem[lstem].ls_host != NULL){ // make sure it is not free-standing
+		if(L[lsite].l_stem[lstem].ls_host->t_site==site){ // colonizing the tree at this site
+		  L[lsite].l_stem.erase(L[lsite].l_stem.begin()+lstem);
+		}
+	      }
+	    }
+	  }
+	}
+	
       } else {
         T[site].t_hurt = short(hurt_decay * float(T[site].t_hurt));                                // reduction of t_hurt according to hurt_decay, could be moved to Tree::Growth() function and made dependent on the tree's carbon gain
       }
