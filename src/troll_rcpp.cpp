@@ -952,6 +952,7 @@ public:
 
   void CalcLAI();
   void Birth(int, int);
+  void Update();
 };
 
 vector<Liana> L; //!< Definition of a vector of the Liana class
@@ -3080,6 +3081,47 @@ void Tree::Update() {
 #endif
     if(death) Death();
     else Growth();   // v.2.4: t_hurt is now updated in the TriggerTreefallSecondary() function
+  }
+}
+
+void Liana::Update(){
+  int liana_death, liana_stem_death, istem, my_stem;
+  if(l_age){
+    liana_death=0;
+    // See if you want to kill the whole organism. If so, set liana_death=1.
+    if(liana_death){
+      // Update LIANA_PRESENCE field.
+      for(istem=0;istem<l_stem.size();istem++){
+	LIANA_PRESENCE[l_stem[istem].ls_site]=0;
+      }
+      LIANA_PRESENCE[l_site]=0;
+      if(l_stem.size()>0)l_stem.resize(0); // Killing all the LianaStem.
+      l_age=0; // Reset Liana attributes.
+      l_sp_lab=0;
+      l_NPPneg=0;
+      l_from_Data=0;
+    }else{
+      l_age+=timestep;
+      my_stem=0;
+      while(my_stem != l_stem.size()){
+	liana_stem_death = 0;
+	// See if you want to kill a LianaStem. If so, set liana_stem_death=1. For
+	// now, only killing it if the host tree dies.
+	if(l_stem[my_stem].ls_host != NULL){
+	  if(l_stem[my_stem].ls_host->t_dbh == 0)liana_stem_death=1;
+	}
+	if(liana_stem_death){
+	  LIANA_PRESENCE[l_stem[my_stem].ls_site] = 0;
+	  l_stem.erase(l_stem.begin()+my_stem);
+	}else{
+	  my_stem++;
+	}
+      }
+      // Now do growth of surviving LianaStem
+      for(istem=0;istem<l_stem.size();istem++){
+	(l_stem[istem].ls_t).Update();
+      }
+    }
   }
 }
 
@@ -5441,6 +5483,7 @@ void Evolution() {
   for(int site=0;site<sites;site++) {
     //**** Tree evolution: Growth or death ****
     T[site].Update();
+    L[site].Update();
   }
   Average();  //! Compute averages for outputs
   if(_OUTPUT_extended) OutputField(); //! Output the statistics
