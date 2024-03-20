@@ -6055,8 +6055,13 @@ void Average(void){
       for(i=0;i<12;i++)
         S[spp].s_sum10 = S[spp].s_sum30 = S[spp].s_ba = S[spp].s_ba10 = S[spp].s_agb = S[spp].s_gpp = S[spp].s_npp = S[spp].s_rday = S[spp].s_rnight = S[spp].s_rstem = S[spp].s_litterfall = 0;
     
-    for(site=0;site<sites;site++)T[site].Average();
-    
+    for(site=0;site<sites;site++){
+      T[site].Average();
+      for(int istem=0;istem<L[site].l_stem.size();istem++){
+	L[site].l_stem[istem].ls_t.Average();
+      }
+    }
+      
     for(spp=1;spp<=nbspp;spp++) {
       float s_sum1 = float(S[spp].s_nbind)*inbhectares;
       S[spp].s_sum10 *= inbhectares;
@@ -6124,6 +6129,15 @@ void Average(void){
         nbtrees_carbstarv_n1++;
         if(T[site].t_dbh >= 0.1) nbtrees_carbstarv_n10++;
         if(T[site].t_dbh >= 0.3) nbtrees_carbstarv_n30++;
+      }
+    }
+    if(L[site].l_age > 0){
+      for(int istem=0;istem<L[site].l_stem.size();istem++){
+	if(L[site].l_stem[istem].ls_t.t_NPP <= 0.0){
+	  nbtrees_carbstarv_n1++;
+	  if(L[site].l_stem[istem].ls_t.t_dbh >= 0.1) nbtrees_carbstarv_n10++;
+	  if(L[site].l_stem[istem].ls_t.t_dbh >= 0.3) nbtrees_carbstarv_n30++;
+	}
       }
     }
   }
