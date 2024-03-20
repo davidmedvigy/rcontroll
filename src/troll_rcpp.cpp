@@ -6318,6 +6318,32 @@ void OutputSnapshot(fstream& output, bool header, float dbh_limit){
         
         output << "\t" << AGB << "\t" << S[T[site].t_sp_lab].s_name << endl;
       }
+
+      // Write out information on aboveground LianaStem
+      if(L[site].l_age > 0){
+	for(int istem=0;istem<L[site].l_stem.size();istem++){
+	  if(L[site].l_stem[istem].ls_t.t_dbh >= dbh_limit){
+	    // recalculate photosynthesis and respiration
+	    L[site].l_stem[istem].ls_t.CalcRespGPP();
+	    L[site].l_stem[istem].ls_t.CalcNPP();
+	    // output all tree variables, this is potentially a very large file
+	    // we currently do not output the t_NDDfield vector, as it is too large
+	    output << iter << "\t" << col << "\t" << row << "\t" << L[site].l_stem[istem].ls_t.t_from_Data << "\t" << L[site].l_stem[istem].ls_t.t_sp_lab << "\t" << site << "\t" << L[site].l_stem[istem].ls_t.t_CrownDisplacement << "\t" << L[site].l_stem[istem].ls_t.t_Pmass << "\t" << L[site].l_stem[istem].ls_t.t_Nmass << "\t" << L[site].l_stem[istem].ls_t.t_LMA << "\t" << L[site].l_stem[istem].ls_t.t_wsg << "\t" << L[site].l_stem[istem].ls_t.t_Rdark << "\t" << L[site].l_stem[istem].ls_t.t_Vcmax << "\t" << L[site].l_stem[istem].ls_t.t_Jmax << "\t" << L[site].l_stem[istem].ls_t.t_leaflifespan << "\t" << L[site].l_stem[istem].ls_t.t_lambda_young << "\t" << L[site].l_stem[istem].ls_t.t_lambda_mature << "\t" << L[site].l_stem[istem].ls_t.t_lambda_old << "\t" << L[site].l_stem[istem].ls_t.t_dbhmature << "\t" << L[site].l_stem[istem].ls_t.t_dbhmax << "\t" << L[site].l_stem[istem].ls_t.t_hmax << "\t" << L[site].l_stem[istem].ls_t.t_ah << "\t" << L[site].l_stem[istem].ls_t.t_Ct << "\t" << L[site].l_stem[istem].ls_t.t_LAImax << "\t" << L[site].l_stem[istem].ls_t.t_fraction_filled << "\t" << L[site].l_stem[istem].ls_t.t_mult_height << "\t" << L[site].l_stem[istem].ls_t.t_mult_CR << "\t" << L[site].l_stem[istem].ls_t.t_mult_CD << "\t" << L[site].l_stem[istem].ls_t.t_mult_P << "\t" << L[site].l_stem[istem].ls_t.t_mult_N << "\t" << L[site].l_stem[istem].ls_t.t_mult_LMA << "\t" << L[site].l_stem[istem].ls_t.t_mult_dbhmax << "\t" << L[site].l_stem[istem].ls_t.t_dev_wsg << "\t" << L[site].l_stem[istem].ls_t.t_age << "\t" << L[site].l_stem[istem].ls_t.t_dbh << "\t" << L[site].l_stem[istem].ls_t.t_sapwood_area << "\t" << L[site].l_stem[istem].ls_t.t_height << "\t" << L[site].l_stem[istem].ls_t.t_CD << "\t" << L[site].l_stem[istem].ls_t.t_CR << "\t" << L[site].l_stem[istem].ls_t.t_GPP << "\t" << L[site].l_stem[istem].ls_t.t_NPP << "\t" << L[site].l_stem[istem].ls_t.t_Rday << "\t" << L[site].l_stem[istem].ls_t.t_Rnight << "\t" << L[site].l_stem[istem].ls_t.t_Rstem << "\t" << L[site].l_stem[istem].ls_t.t_LAmax << "\t" << L[site].l_stem[istem].ls_t.t_LA << "\t" << L[site].l_stem[istem].ls_t.t_youngLA << "\t" << L[site].l_stem[istem].ls_t.t_matureLA << "\t" << L[site].l_stem[istem].ls_t.t_oldLA << "\t" << L[site].l_stem[istem].ls_t.t_LAI << "\t" << L[site].l_stem[istem].ls_t.t_litter << "\t" << L[site].l_stem[istem].ls_t.t_carbon_storage << "\t" << L[site].l_stem[istem].ls_t.t_carbon_biometry << "\t" << L[site].l_stem[istem].ls_t.t_multiplier_seed << "\t" << L[site].l_stem[istem].ls_t.t_hurt << "\t" << L[site].l_stem[istem].ls_t.t_NPPneg;
+        
+#ifdef Output_ABC
+	    output << "\t" << L[site].l_stem[istem].ls_t.t_dbh_previous;
+#endif
+        
+	    // we add a few tree-based variables that are derived or environment-related, but not directly kept track of
+	    float AGB = L[site].l_stem[istem].ls_t.CalcAGB();
+        
+	    output << "\t" << AGB << "\t" << S[L[site].l_stem[istem].ls_t.t_sp_lab].s_name << endl;
+	  }
+	}
+      }
+
+
+
     }
   }
 }
