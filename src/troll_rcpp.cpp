@@ -3877,8 +3877,8 @@ int main(int argc, char *argv[]
       float sd_beam = 5.0;            // standard deviation of those
       
       UpdateTransmittanceCHM_ABC(mean_beam, sd_beam, klight, transmittance_nir);
-      OutputABC();
-      UpdateDBHtrackingABC();
+      OutputABC(); // does not include lianas
+      UpdateDBHtrackingABC(); // does not include lianas
     }
 #endif
   }
@@ -6271,11 +6271,11 @@ void OutputField(){
     // output fields, nbout times during simulation (every freqout iterations)
     int d;
     for(d=0;d<dbhmaxincm;d++) nbdbh[d]=0;
-    for(site=0;site<sites;site++) T[site].histdbh();
+    for(site=0;site<sites;site++) T[site].histdbh(); // does not currently include lianas
     
     for(h=0;h<(HEIGHT+1);h++){
       layer[h] = 0;
-      for(site=0;site<sites;site++) layer[h] += LAI3D[h][site+SBORD];
+      for(site=0;site<sites;site++) layer[h] += LAI3D[h][site+SBORD]; // does include lianas
     }
     
 #ifdef MPI
