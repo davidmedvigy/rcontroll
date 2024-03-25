@@ -1118,8 +1118,19 @@ void LianaStem::ColonizeTree(){
   }
 
   // Third, set the new properties of the LianaStem.
-  ls_host = site_colonize;
-
+  if(colonization_success == 1){
+    ls_host = site_colonize;
+    ls_t.t_site = site_colonize;
+    ls_t.t_height = T[site_colonize].t_height;
+    ls_t.t_CR = T[site_colonize].t_CR;
+    ls_t.t_CD = T[site_colonize].t_CD;
+    float crown_area = PI * ls_t.t_CR * ls_t.t_CR;
+    float crown_area_nogaps = ls_t.GetCrownAreaFilled(crown_area);
+    ls_t.t_LAI = ls_t.t_LA/crown_area_nogaps; // Just smearing the LA throughout the tree crown.
+    
+    //cout << "Colonization: " << col_ls << " Host: " << col_colonize << endl;
+  }
+  
 }
 
 void LianaStem::Birth(int nume, int site0){
