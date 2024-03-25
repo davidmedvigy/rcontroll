@@ -3127,40 +3127,34 @@ void Tree::Update() {
 
 void Liana::Update(){
   int liana_death, liana_stem_death, istem, my_stem;
+  
   if(l_age){
-    liana_death=0;
-    // See if you want to kill the whole organism. If so, set liana_death=1.
-    if(liana_death){
-      // Update LIANA_PRESENCE field.
-      for(istem=0;istem<l_stem.size();istem++){
-	LIANA_PRESENCE[l_stem[istem].ls_site]=0;
-      }
-      LIANA_PRESENCE[l_site]=0;
-      if(l_stem.size()>0)l_stem.resize(0); // Killing all the LianaStem.
-      l_age=0; // Reset Liana attributes.
-      l_sp_lab=0;
-      l_NPPneg=0;
-      l_from_Data=0;
-    }else{
-      l_age+=timestep;
-      my_stem=0;
-      while(my_stem != l_stem.size()){
-	liana_stem_death = 0;
-	// See if you want to kill a LianaStem. If so, set liana_stem_death=1. For
-	// now, only killing it if the host tree dies.
-	if(l_stem[my_stem].ls_host >= 0){
-	  if(T[l_stem[my_stem].ls_host].t_dbh == 0)liana_stem_death=1;
-	  if(liana_stem_death==0){
-	    if(int(gsl_rng_uniform(gslrng)+l_stem[my_stem].ls_t.DeathRate(l_stem[my_stem].ls_t.t_dbh, l_stem[my_stem].ls_t.t_NPPneg))==1)liana_stem_death=1;
-	  }
-	}
-	if(liana_stem_death){
-	  if(L[l_stem[my_stem].ls_site].l_age==0)LIANA_PRESENCE[l_stem[my_stem].ls_site] = 0;
-	  l_stem.erase(l_stem.begin()+my_stem);
-	}else{
-	  my_stem++;
+    my_stem=0;
+    while(my_stem != l_stem.size()){
+      liana_stem_death = 0;
+      // See if you want to kill a LianaStem. If so, set liana_stem_death=1.
+      // First, deaths related the host tree (if any).
+      if(l_stem[my_stem].ls_host >= 0){
+	// 1. Kill LianaStem if the host tree dies.
+	if(T[l_stem[my_stem].ls_host].t_dbh == 0)liana_stem_death=1;
+	// 2. Kill LianaStem if it is shed from the host tree.
+	if(liana_stem_death==0){
+	  float shed_prob = 0.005;
+	  if(gsl_rng_uniform(gslrng)<shed_prob)liana_stem_death=1;
 	}
       }
+      // 3. Kill the LianaStem with ordinary DeathRate function
+      if(liana_stem_death==0){
+	if(int(gsl_rng_uniform(gslrng)+l_stem[my_stem].ls_t.DeathRate(l_stem[my_stem].ls_t.t_dbh, l_stem[my_stem].ls_t.t_NPPneg))==1)liana_stem_death=1;
+      }
+      if(liana_stem_death){
+	if(L[l_stem[my_stem].ls_site].l_age==0)LIANA_PRESENCE[l_stem[my_stem].ls_site] = 0;
+	l_stem.erase(l_stem.begin()+my_stem);
+      }else{
+	my_stem++;
+      }
+    }
+    if(l_stem.size()>0){
       // Now do growth of surviving LianaStem
       for(istem=0;istem<l_stem.size();istem++){
 	// If the LianaStem is colonizing a tree, make sure it has the tree's crown properties.
@@ -3171,12 +3165,22 @@ void Liana::Update(){
 	  float crown_area = PI * l_stem[istem].ls_t.t_CR * l_stem[istem].ls_t.t_CR;
 	  float crown_area_nogaps = l_stem[istem].ls_t.GetCrownAreaFilled(crown_area);
 	  l_stem[istem].ls_t.t_LAI = l_stem[istem].ls_t.t_LA/crown_area_nogaps; // Just smearing the LA throughout the tree crown.
-	  (l_stem[istem].ls_t).Growth(l_stem[istem].ls_host);
 	}
+	// Call the Growth function for free-standing and colonizing lianas.
+	(l_stem[istem].ls_t).Growth(l_stem[istem].ls_host);
       }
+      l_age+=timestep;
+    }else{
+      // No surviving LianaStem. Kill the whole organism.
+      LIANA_PRESENCE[l_site]=0;
+      l_age=0; // Reset Liana attributes.
+      l_sp_lab=0;
+      l_NPPneg=0;
+      l_from_Data=0;
     }
   }
 }
+
 
 //####################################
 // Tree falling function, called by TriggerTreefall
