@@ -916,17 +916,17 @@ vector<Tree> T; //!< Definition of a vector of the Tree class
 
 class LianaStem{
 public:
-  Tree *ls_host;
+  int ls_host;
   Tree ls_t;
   int ls_site;
   
   LianaStem(){
     ls_site=0;
-    ls_host=NULL;
+    ls_host=-1;
   };
 
   void Birth(int, int);
-
+  void ColonizeTree();
 };
 
 
@@ -1092,8 +1092,38 @@ void Tree::Birth(int nume, int site0) {
   }
 }
 
+void LianaStem::ColonizeTree(){
+
+  // First, pick a site for the LianaStem to colonize.
+  float mean_colonization_distance=5.0; // For simplicity. This could be species-specific, or it could depend on heights.
+  float rho = gsl_ran_rayleigh(gslrng, mean_colonization_distance);
+  float theta_angle = float(twoPi*gsl_rng_uniform(gslrng)); // Colonization angle
+  int col_ls = ls_site%cols;
+  int row_ls = ls_site/cols;
+  int dist_cols = int(rho*cos(theta_angle));
+  int dist_rows = int(rho*sin(theta_angle));
+  int col_colonize = dist_cols + col_ls;
+  int row_colonize = dist_rows + row_ls;
+  int site_colonize=col_colonize+cols*row_colonize;
+  int colonization_success = 0;
+  
+  // Second, see if the site is suitable for colonization.
+  if(col_colonize>=0 && col_colonize<cols && row_colonize>=0 && row_colonize<rows){  // In range
+    if(T[site_colonize].t_age > 0){ // In the future, we can certainly include other requirements
+      float colonization_success_prob = 0.01;
+      if(gsl_rng_uniform(gslrng) < colonization_success_prob){
+	colonization_success = 1;
+      }
+    }
+  }
+
+  // Third, set the new properties of the LianaStem.
+  ls_host = site_colonize;
+
+}
+
 void LianaStem::Birth(int nume, int site0){
-  ls_host=NULL; // starts out as free-standing
+  ls_host=-1; // starts out as free-standing
   ls_site=site0; // First LianaStem occupies the same site as its Liana
   ls_t.Birth(nume,site0);
 }
@@ -3107,8 +3137,8 @@ void Liana::Update(){
 	liana_stem_death = 0;
 	// See if you want to kill a LianaStem. If so, set liana_stem_death=1. For
 	// now, only killing it if the host tree dies.
-	if(l_stem[my_stem].ls_host != NULL){
-	  if(l_stem[my_stem].ls_host->t_dbh == 0)liana_stem_death=1;
+	if(l_stem[my_stem].ls_host >= 0){
+	  if(T[l_stem[my_stem].ls_host].t_dbh == 0)liana_stem_death=1;
 	}
 	if(liana_stem_death){
 	  LIANA_PRESENCE[l_stem[my_stem].ls_site] = 0;
@@ -5610,6 +5640,19 @@ void UpdateField() {
   }
   
   RecruitTree();
+
+  // Liana colonization: free-standing liana colonizes a tree
+  for(int site=0;site<sites;site++){
+    if(L[site].l_age>0){
+      for(int istem=0;istem<L[site].l_stem.size();istem++){
+	if(L[site].l_stem[istem].ls_host<0){
+	  L[site].l_stem[istem].ColonizeTree();
+	}
+      }
+    }
+  }
+
+
   //  Compute Field LAI3D
 #ifdef MPI
   // Reinitialize field LAI3D
@@ -5861,8 +5904,8 @@ void TriggerTreefall(){
 	for(int lsite=0;lsite<sites;lsite++){ // loop over sites
 	  if(L[lsite].l_age){ // find lianas
 	    for(int lstem=0;lstem<L[lsite].l_stem.size();lstem++){ // loop over LianaStem
-	      if(L[lsite].l_stem[lstem].ls_host != NULL){ // make sure it is not free-standing
-		if(L[lsite].l_stem[lstem].ls_host->t_site==site){ // colonizing the tree at this site
+	      if(L[lsite].l_stem[lstem].ls_host>= 0){ // make sure it is not free-standing
+		if(T[L[lsite].l_stem[lstem].ls_host].t_site==site){ // colonizing the tree at this site
 		  L[lsite].l_stem.erase(L[lsite].l_stem.begin()+lstem);
 		}
 	      }
@@ -5874,7 +5917,7 @@ void TriggerTreefall(){
 
     if(L[site].l_age) {
       for(int istem=0;istem<L[site].l_stem.size();istem++){ // loop over the LianaStem
-	if(L[site].l_stem[istem].ls_host==NULL){ // free-standing LianaStem
+	if(L[site].l_stem[istem].ls_host<0){ // free-standing LianaStem
 	  // treefall is triggered given a certain flexural force
 	  // _BASICTREEFALL: just dependent on height threshold + random uniform distribution
 	  float angle = 0.0, c_forceflex = 0.0;
@@ -5942,8 +5985,8 @@ void TriggerTreefallSecondary(){
 	for(int lsite=0;lsite<sites;lsite++){ // loop over sites
 	  if(L[lsite].l_age){ // find lianas
 	    for(int lstem=0;lstem<L[lsite].l_stem.size();lstem++){ // loop over LianaStem
-	      if(L[lsite].l_stem[lstem].ls_host != NULL){ // make sure it is not free-standing
-		if(L[lsite].l_stem[lstem].ls_host->t_site==site){ // colonizing the tree at this site
+	      if(L[lsite].l_stem[lstem].ls_host>=0){ // make sure it is not free-standing
+		if(T[L[lsite].l_stem[lstem].ls_host].t_site==site){ // colonizing the tree at this site
 		  L[lsite].l_stem.erase(L[lsite].l_stem.begin()+lstem);
 		}
 	      }
@@ -5957,7 +6000,7 @@ void TriggerTreefallSecondary(){
     }
     if(L[site].l_age){ // Loop over lianas as well
       for(int istem=0;istem<L[site].l_stem.size();istem++){ // loop over the LianaStem
-	if(L[site].l_stem[istem].ls_host==NULL){ // free-standing LianaStem
+	if(L[site].l_stem[istem].ls_host<0){ // free-standing LianaStem
 	  float height_threshold = L[site].l_stem[istem].ls_t.t_height/L[site].l_stem[istem].ls_t.t_mult_height;  // since 2.5: a tree's stability is defined by its species' average height, i.e. we divide by the intraspecific height multiplier to account for lower stability in quickly growing trees; otherwise slender, faster growing trees would be treated preferentially and experience less secondary treefall than more heavily built trees
 	  if(2.0*L[site].l_stem[istem].ls_t.t_hurt*gsl_rng_uniform(gslrng) > height_threshold) {        // check whether tree dies: probability of death is 1.0-0.5*t_height/t_hurt, so gslrng <= 1.0 - 0.5 * t_height/t_hurt, or gslrng > 0.5 * t_height/t_hurt; modified in v.2.5: probability of death is 1.0 - 0.5*t_height/(t_mult_height * t_hurt), so the larger the height deviation (more slender), the higher the risk of being thrown by another tree
 	    if(p_tfsecondary > gsl_rng_uniform(gslrng)){                              // check whether tree falls or dies otherwise
