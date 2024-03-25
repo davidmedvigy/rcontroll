@@ -836,7 +836,7 @@ public:
   void Birth(int,int);    //!< Tree birth
   int BirthFromInventory(int site, vector<string> &parameter_names, vector<string> &parameter_values, int &nb_speciesrandom);  //!< Tree initialisation from field data, completely updated in v.3.1
   void Death();                   //!< Tree death, called by Tree::Update
-  void Growth();                  //!< Tree growth
+  void Growth(int ls_host);                  //!< Tree growth
   void Fluxh(int h, float &PPFD, float &VPD, float &Tmp, float &leafarea_layer); //!< Computation of PPFD right above the tree -- called by Tree::Birth and Tree::Growth
   
 #ifdef WATER
@@ -2646,7 +2646,7 @@ float Tree::predLeafLifespanKikuzawa(){
 //#############################################
 // Tree growth
 //#############################################
-void Tree::Growth() {
+void Tree::Growth(int ls_host=-1) {
   //update age
   t_age+= timestep;                               //new v.2.2: increments are not 1 yr, but the duration of the timestep (usually 1 or <1, i.e. 1/12 if monthly, 1/365 if daily
   
@@ -2715,7 +2715,7 @@ void Tree::Growth() {
       //in future versions: build up a carbon pool as buffer for stress situations !!!UPDATE
       //NPP allocation to wood and tree size increment
       UpdateLeafDynamics();
-      if(S[t_sp_lab].s_growthform != 1)UpdateTreeBiometry();
+      if(S[t_sp_lab].s_growthform != 1 || ls_host<0)UpdateTreeBiometry();
     }
   }
   
@@ -3171,7 +3171,7 @@ void Liana::Update(){
 	  float crown_area = PI * l_stem[istem].ls_t.t_CR * l_stem[istem].ls_t.t_CR;
 	  float crown_area_nogaps = l_stem[istem].ls_t.GetCrownAreaFilled(crown_area);
 	  l_stem[istem].ls_t.t_LAI = l_stem[istem].ls_t.t_LA/crown_area_nogaps; // Just smearing the LA throughout the tree crown.
-	  (l_stem[istem].ls_t).Update();
+	  (l_stem[istem].ls_t).Growth(l_stem[istem].ls_host);
 	}
       }
     }
