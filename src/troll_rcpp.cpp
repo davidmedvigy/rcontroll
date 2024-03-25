@@ -3160,7 +3160,16 @@ void Liana::Update(){
       }
       // Now do growth of surviving LianaStem
       for(istem=0;istem<l_stem.size();istem++){
-	(l_stem[istem].ls_t).Update();
+	// If the LianaStem is colonizing a tree, make sure it has the tree's crown properties.
+	if(l_stem[istem].ls_host>=0){
+	  l_stem[istem].ls_t.t_height = T[l_stem[istem].ls_host].t_height;
+	  l_stem[istem].ls_t.t_CR = T[l_stem[istem].ls_host].t_CR;
+	  l_stem[istem].ls_t.t_CD = T[l_stem[istem].ls_host].t_CD;
+	  float crown_area = PI * l_stem[istem].ls_t.t_CR * l_stem[istem].ls_t.t_CR;
+	  float crown_area_nogaps = l_stem[istem].ls_t.GetCrownAreaFilled(crown_area);
+	  l_stem[istem].ls_t.t_LAI = l_stem[istem].ls_t.t_LA/crown_area_nogaps; // Just smearing the LA throughout the tree crown.
+	  (l_stem[istem].ls_t).Update();
+	}
       }
     }
   }
