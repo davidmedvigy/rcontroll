@@ -5865,7 +5865,8 @@ void FillSeed(int col, int row, int spp) {
 // Global function: tree germination module
 //#############################
 void RecruitTree(){
-  for(int site=0;site<sites;site++) {  //**** Local germination ****
+  int site;
+  for(site=0;site<sites;site++) {  //**** Local germination ****
     if(T[site].t_age == 0.0 && LIANA_PRESENCE[site] == 0) { // No trees, no lianas at site. I need to remember to
       // define LIANA_PRESENCE when I add a liana.
       int spp_withseeds = 0;
@@ -5907,6 +5908,41 @@ void RecruitTree(){
       }
     }
   }
+    
+    // Sprout a new LianaStem
+    if(L[site].l_age > 1){
+      // Pick a site and see if it is available.
+      float mean_sprout_distance=2.0; // For simplicity, this is a constant.
+      float rho = gsl_ran_rayleigh(gslrng, mean_sprout_distance);
+      float theta_angle = float(twoPi*gsl_rng_uniform(gslrng));
+      int col_liana = L[site].l_site%cols;
+      int row_liana = L[site].l_site/cols;
+      int dist_cols = int(rho*cos(theta_angle));
+      int dist_rows = int(rho*sin(theta_angle));
+      int col_sprout = dist_cols + col_liana;
+      int row_sprout = dist_rows + row_liana;
+      int sprout_site=col_sprout+cols*row_sprout;
+      int sprout_success = 0;
+      // Suitable for colonization?
+      if(col_sprout>=0 && col_sprout<cols && row_sprout>=0 && row_sprout<rows){  // In range
+	if(T[sprout_site].t_age == 0 && LIANA_PRESENCE[sprout_site]==0){ // Nothing there
+	  float sprout_prob = 0.01;
+	  if(gsl_rng_uniform(gslrng)<sprout_prob){  // Sprout rate
+	    // Check light environment
+	    int dev_rand = int(gsl_rng_uniform_int(gslrng,10000));
+	    int index_LAImax = dev_rand + (L[site].l_sp_lab - 1) * 10000;
+	    float LAImax_precomputed = LookUpLAImax[index_LAImax];
+	    if(LAI3D[0][sprout_site+SBORD] < LAImax_precomputed)sprout_success = 1;
+	  }
+	}
+      }
+      if(sprout_success==1){
+	LianaStem temp_ls;
+	temp_ls.Birth(L[site].l_sp_lab,sprout_site);
+	L[site].l_stem.push_back(temp_ls);
+	LIANA_PRESENCE[sprout_site]=1;
+      }
+    } 
 }
 
 //#############################
