@@ -2715,7 +2715,7 @@ void Tree::Growth() {
       //in future versions: build up a carbon pool as buffer for stress situations !!!UPDATE
       //NPP allocation to wood and tree size increment
       UpdateLeafDynamics();
-      UpdateTreeBiometry();
+      if(S[t_sp_lab].s_growthform != 1)UpdateTreeBiometry();
     }
   }
   
@@ -3150,9 +3150,12 @@ void Liana::Update(){
 	// now, only killing it if the host tree dies.
 	if(l_stem[my_stem].ls_host >= 0){
 	  if(T[l_stem[my_stem].ls_host].t_dbh == 0)liana_stem_death=1;
+	  if(liana_stem_death==0){
+	    if(int(gsl_rng_uniform(gslrng)+l_stem[my_stem].ls_t.DeathRate(l_stem[my_stem].ls_t.t_dbh, l_stem[my_stem].ls_t.t_NPPneg))==1)liana_stem_death=1;
+	  }
 	}
 	if(liana_stem_death){
-	  LIANA_PRESENCE[l_stem[my_stem].ls_site] = 0;
+	  if(L[l_stem[my_stem].ls_site].l_age==0)LIANA_PRESENCE[l_stem[my_stem].ls_site] = 0;
 	  l_stem.erase(l_stem.begin()+my_stem);
 	}else{
 	  my_stem++;
