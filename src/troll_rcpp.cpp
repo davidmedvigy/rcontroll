@@ -1110,9 +1110,12 @@ void LianaStem::ColonizeTree(){
   // Second, see if the site is suitable for colonization.
   if(col_colonize>=0 && col_colonize<cols && row_colonize>=0 && row_colonize<rows){  // In range
     if(T[site_colonize].t_age > 0){ // In the future, we can certainly include other requirements
-      float colonization_success_prob = 0.01;
-      if(gsl_rng_uniform(gslrng) < colonization_success_prob){
-	colonization_success = 1;
+      if(T[site_colonize].t_height>5.0){
+	//      float colonization_success_prob = 0.01;
+	float colonization_success_prob = 0.1;
+	if(gsl_rng_uniform(gslrng) < colonization_success_prob){
+	  colonization_success = 1;
+	}
       }
     }
   }
@@ -3139,7 +3142,8 @@ void Liana::Update(){
 	if(T[l_stem[my_stem].ls_host].t_dbh == 0)liana_stem_death=1;
 	// 2. Kill LianaStem if it is shed from the host tree.
 	if(liana_stem_death==0){
-	  float shed_prob = 0.005;
+	  //float shed_prob = 0.005;
+	  float shed_prob = 0.0005;
 	  if(gsl_rng_uniform(gslrng)<shed_prob)liana_stem_death=1;
 	}
       }
@@ -5903,12 +5907,12 @@ void RecruitTree(){
 	  }else{
 	    L[site].Birth(spp,site);
 	  }
+	}
 #endif
 #endif
       }
     }
-  }
-    
+    /*    
     // Sprout a new LianaStem
     if(L[site].l_age > 1){
       // Pick a site and see if it is available.
@@ -5942,7 +5946,8 @@ void RecruitTree(){
 	L[site].l_stem.push_back(temp_ls);
 	LIANA_PRESENCE[sprout_site]=1;
       }
-    } 
+      } */
+  }
 }
 
 //#############################
