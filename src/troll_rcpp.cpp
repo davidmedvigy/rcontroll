@@ -307,6 +307,8 @@ float cov_P_LMA; //!< Global variable: intraspecific covariance between leaf pho
 // liana parameters
 float colonization_success_prob;
 float shed_prob;
+float mean_colonization_dist;
+float min_tree_colo_height;
 
 // LookUp_tables for intraspecific variation, modified FF v.3.1.5 (reduced to 10000)
 float d_intraspecific_height[10000]; //!< Global vector: distribution of intraspecific values for maximal tree height
@@ -1099,8 +1101,7 @@ void Tree::Birth(int nume, int site0) {
 void LianaStem::ColonizeTree(){
 
   // First, pick a site for the LianaStem to colonize.
-  float mean_colonization_distance=5.0; // For simplicity. This could be species-specific, or it could depend on heights.
-  float rho = gsl_ran_rayleigh(gslrng, mean_colonization_distance);
+  float rho = gsl_ran_rayleigh(gslrng, mean_colonization_dist);
   float theta_angle = float(twoPi*gsl_rng_uniform(gslrng)); // Colonization angle
   int col_ls = ls_site%cols;
   int row_ls = ls_site/cols;
@@ -1114,7 +1115,7 @@ void LianaStem::ColonizeTree(){
   // Second, see if the site is suitable for colonization.
   if(col_colonize>=0 && col_colonize<cols && row_colonize>=0 && row_colonize<rows){  // In range
     if(T[site_colonize].t_age > 0){ // In the future, we can certainly include other requirements
-      if(T[site_colonize].t_height>5.0){
+      if(T[site_colonize].t_height>min_tree_colo_height){
 	//      float colonization_success_prob = 0.01;
 	//float colonization_success_prob = 0.1;
 	if(gsl_rng_uniform(gslrng) < colonization_success_prob){
@@ -4140,6 +4141,10 @@ void AssignValueGlobal(string parameter_name, string parameter_value){
     SetParameter(parameter_name, parameter_value, colonization_success_prob, 0.0f, 1000000.0f, 0.000001f, quiet);
   } else if(parameter_name == "shed_prob"){
     SetParameter(parameter_name, parameter_value, shed_prob, 0.0f, 1000000.0f, 0.000001f, quiet);
+  } else if(parameter_name == "mean_colonization_dist"){
+    SetParameter(parameter_name, parameter_value, mean_colonization_dist, 0.0f, 1000.0f, 5.0f, quiet);
+  } else if(parameter_name == "min_tree_colo_height"){
+    SetParameter(parameter_name, parameter_value, mean_colonization_dist, 0.0f, 100.0f, 5.0f, quiet);
   } else if(parameter_name == "_LL_parameterization"){
     SetParameter(parameter_name, parameter_value, _LL_parameterization, bool(0), bool(1), bool(1), quiet);
   } else if(parameter_name == "_LA_regulation"){
@@ -4236,8 +4241,8 @@ void AssignValuePointcloud(string parameter_name, string parameter_value){
 void ReadInputGeneral(){
   fstream In(inputfile, ios::in);
   if(In){
-    string parameter_names[64] = {"cols","rows","HEIGHT","length_dcell","nbiter","NV","NH","nbout","p_nonvert","SWtoPPFD","klight","absorptance_leaves","theta","phi","g1","vC","DBH0","H0","CR_min","CR_a","CR_b","CD_a","CD_b","CD0","shape_crown","dens","fallocwood","falloccanopy","Cseedrain","nbs0","sigma_height","sigma_CR","sigma_CD","sigma_P","sigma_N","sigma_LMA","sigma_wsg","sigma_dbhmax","corr_CR_height","corr_N_P","corr_N_LMA","corr_P_LMA","leafdem_resolution","p_tfsecondary","hurt_decay","crown_gap_fraction","m","m1","Cair","_LL_parameterization","_LA_regulation","_sapwood","_seedsadditional","_NONRANDOM","Rseed","_GPPcrown","_BASICTREEFALL","_SEEDTRADEOFF","_NDD","_CROWN_MM","_OUTPUT_extended","extent_visual","colonization_success_prob","shed_prob"};
-    int nb_parameters = 64;
+    string parameter_names[66] = {"cols","rows","HEIGHT","length_dcell","nbiter","NV","NH","nbout","p_nonvert","SWtoPPFD","klight","absorptance_leaves","theta","phi","g1","vC","DBH0","H0","CR_min","CR_a","CR_b","CD_a","CD_b","CD0","shape_crown","dens","fallocwood","falloccanopy","Cseedrain","nbs0","sigma_height","sigma_CR","sigma_CD","sigma_P","sigma_N","sigma_LMA","sigma_wsg","sigma_dbhmax","corr_CR_height","corr_N_P","corr_N_LMA","corr_P_LMA","leafdem_resolution","p_tfsecondary","hurt_decay","crown_gap_fraction","m","m1","Cair","_LL_parameterization","_LA_regulation","_sapwood","_seedsadditional","_NONRANDOM","Rseed","_GPPcrown","_BASICTREEFALL","_SEEDTRADEOFF","_NDD","_CROWN_MM","_OUTPUT_extended","extent_visual","colonization_success_prob","shed_prob","mean_colonization_dist","min_tree_colo_height"};
+    int nb_parameters = 66;
     vector<string> parameter_values(nb_parameters,"");
     
     cout << endl << "Reading in file: " << inputfile << endl;
