@@ -55,6 +55,8 @@
 #undef TRACK_INDIVIDUALS //!< new in v.2.5: DIAGNOSTIC TOOL, individual-based tracking of trees for PBA (process-based analytics, an accounting-like monitoring of model behavior through individual states and processes). PLEASE BE AWARE: onset of tracking is currently hardcoded to comprise trees born in year 501 in forest regeneration. Also: Filesizes can get VERY VERY LARGE if more trees are included.
 #undef CHECK_CARBON      //!< new in v.2.5: DIAGNOSTIC TOOL, checking of carbon budgets, could potentially be extended for nutrient budget checking in the future. The idea is to keep track of carbon stocks and carbon fluxes every timestep to see whether there are any deviations from expectations - to do so, differences between stocks are computed at each timestep, and can be compared to the gross and net assimilation of carbon
 
+#define SENSITIVITY // minimal set of output variables
+
 // LIBRARIES
 #include <cstdio>
 #include <iostream>
@@ -2135,7 +2137,10 @@ float Tree::DeathRate(float dbh, int nppneg) {
   
   dr=basal;
   if (nppneg > t_leaflifespan) dr+=1.0/timestep;
+#ifdef SENSITIVITY
+#else
   if (iter == int(nbiter-1) && _OUTPUT_extended == 1) output_extended[4] << iter << "\t" << t_wsg << "\t"  << dbh << "\t" << basal << "\t" << dr   <<  "\n";
+#endif
   return dr*timestep;
 }
 #endif
@@ -3044,9 +3049,12 @@ void Tree::Death() {
   }
   // New v.2.2. new outputs
   if(_OUTPUT_extended) {
+#ifdef SENSITIVITY
+#else
     if(iter == 2) output_extended[3] << iter << "\t" << S[t_sp_lab].s_name << "\t" << t_age << "\t" << t_dbh << "\t" << t_height <<  "\n";
     if(iter == int(nbiter/2)) output_extended[3] << iter << "\t" << S[t_sp_lab].s_name << "\t" << t_age << "\t" << t_dbh << "\t" << t_height <<  "\n";
     if(iter == int(nbiter-1)) output_extended[3] << iter << "\t" << S[t_sp_lab].s_name << "\t" << t_age << "\t" << t_dbh << "\t" << t_height <<  "\n";
+#endif
   }
   
   t_sp_lab = 0;
@@ -3904,9 +3912,11 @@ int main(int argc, char *argv[]
   }
   
   // initial pattern, should be empty, unless an inventory has been provided
+#ifdef SENSITIVITY
+#else
   if(_OUTPUT_extended) OutputSnapshot(output_basic[1], 1, 0.01);                  // Initial Pattern, for trees > 0.01m DBH
   else OutputSnapshot(output_basic[1], 1, 0.1);                                   // Initial Pattern, for trees > 0.1m DBH
-  
+#endif
 
   if(_OUTPUT_pointcloud == 1 && iter_pointcloud_generation == 0){
 
@@ -3952,6 +3962,8 @@ int main(int argc, char *argv[]
   cout << "Simulation ends with " << nblivetrees << " trees." << endl;
   
   // final pattern
+#ifdef SENSITIVITY
+#else
   if(_OUTPUT_extended){
     OutputSnapshot(output_basic[2], 1, 0.01);                 // Final Pattern, for trees > 0.01m DBH
     OutputLAI(output_extended[7]);
@@ -3959,6 +3971,7 @@ int main(int argc, char *argv[]
   } else {
     OutputSnapshot(output_basic[2], 1, 0.1);                  // Final Pattern, for trees > 0.1m DBH
   }
+#endif
   
   //***********************
   //** End of simulation **
@@ -4887,6 +4900,10 @@ void InitialiseOutputStreams(){
   if(!mpi_rank) {
     snprintf(nnn,sizeof(nnn),"%s_%i_sumstats.txt",buf, easympi_rank);
     output_basic[0].open(nnn, ios::out);
+#ifdef SENSITIVITY
+    // write headers for files
+    output_basic[0] << "iter\tsum1\tsum10\tsum30\tba\tba10\tagb\tgpp\tnpp\trday\trnight\trstem\tlitterfall" << endl;
+#else
     snprintf(nnn,sizeof(nnn),"%s_%i_initial_pattern.txt",buf, easympi_rank); // previously "state" output, but not used anymore, overwritten for initial pattern
     output_basic[1].open(nnn, ios::out);
     snprintf(nnn,sizeof(nnn),"%s_%i_final_pattern.txt",buf, easympi_rank);
@@ -4895,8 +4912,10 @@ void InitialiseOutputStreams(){
     // write headers for files
     output_basic[0] << "iter\tsum1\tsum10\tsum30\tba\tba10\tagb\tgpp\tnpp\trday\trnight\trstem\tlitterfall" << endl;
     // headers for initial and final patterns are written automatically
-    
+#endif    
     if(_OUTPUT_extended){
+#ifdef SENSITIVITY
+#else
       snprintf(nnn,sizeof(nnn),"%s_%i_sumstats_species.txt",buf, easympi_rank);
       output_extended[0].open(nnn, ios::out);
       snprintf(nnn,sizeof(nnn),"%s_%i_ppfd0.txt",buf, easympi_rank);
@@ -4924,7 +4943,7 @@ void InitialiseOutputStreams(){
       output_extended[4] << "iter\twsg\tdbh\tbasal\tdr" <<  endl;
       output_extended[5] << "iter\td\tfreq" << endl;
       output_extended[6] << "iter\th\tfreq" << endl;
-      
+#endif      
       if(extent_visual > 0){
         snprintf(nnn,sizeof(nnn),"%s_%i_visual_field.txt",buf, easympi_rank);
         output_visual[0].open(nnn, ios::out);
@@ -4949,6 +4968,8 @@ void InitialiseOutputStreams(){
     }
     
 #ifdef Output_ABC
+#ifdef SENSITIVITY
+#else
     snprintf(nnn,sizeof(nnn),"%s_%i_abc_traitconservation.txt",buf, easympi_rank);
     output_abc[0].open(nnn, ios::out);
     snprintf(nnn,sizeof(nnn),"%s_%i_abc_ground.txt",buf, easympi_rank);
@@ -4971,6 +4992,7 @@ void InitialiseOutputStreams(){
     output_abc[9].open(nnn, ios::out);
     snprintf(nnn,sizeof(nnn),"%s_%i_abc_biomass.txt",buf, easympi_rank);
     output_abc[10].open(nnn, ios::out);
+#endif
 #endif
     
 #ifdef WATER
@@ -6214,11 +6236,17 @@ void Average(void){
       litterfall += S[spp].s_litterfall;
       
       if(_OUTPUT_extended){
+#ifdef SENSITIVITY
+#else
         output_extended[0] << iter << "\t" << S[spp].s_name << "\t" << s_sum1 << "\t" << S[spp].s_sum10 << "\t" << S[spp].s_sum30 << "\t" << S[spp].s_ba << "\t" << S[spp].s_ba10 << "\t" << S[spp].s_agb << "\t" << S[spp].s_gpp << "\t" << S[spp].s_npp << "\t" << S[spp].s_rday << "\t" << S[spp].s_rnight << "\t" << S[spp].s_rstem << "\t" << S[spp].s_litterfall << endl;
+#endif
       }
     }
     
+#ifdef SENSITIVITY
+#else
     output_basic[0] << iter << "\t" << sum1 << "\t" << sum10 << "\t" << sum30 << "\t" << ba << "\t" << ba10 << "\t" << agb << "\t" << gpp << "\t" << npp << "\t" << rday << "\t" << rnight << "\t" << rstem << "\t" << litterfall << endl;
+#endif
     
     cout.setf(ios::fixed,ios::floatfield);
     cout.precision(2);
@@ -6234,11 +6262,14 @@ void Average(void){
       }
       tototest /=float(sites*LH*LH);                              // Average light flux (PPFD) on the ground
       tototest2 /=float(sites*LH*LH);
+#ifdef SENSITIVITY
+#else
       if(iter) output_extended[1] << iter<< "\tMean PPFDground\t" << tototest << "\t" << sqrt(tototest2-tototest*tototest) << "\n";
       
       
       if(_BASICTREEFALL) output_extended[2] << iter << "\t" << nbdead_n1*inbhectares << "\t" << nbdead_n10*inbhectares<< "\t" << nbTreefall1*inbhectares << "\t" << nbTreefall10*inbhectares << endl;
       else output_extended[2] << iter << "\t" << nbdead_n1*inbhectares << "\t" << nbdead_n10*inbhectares << endl;
+#endif
       
     }
   }
@@ -6409,11 +6440,16 @@ void OutputField(){
 #endif
     if(!mpi_rank) {
       // output of the dbh histograms (
+#ifdef SENSITIVITY
+#else
       for(d=1;d<dbhmaxincm;d++) output_extended[5] << iter << "\t" << d << "\t" << nbdbh[d]  << "\n";
-      
+#endif
       // output of the mean LAI per height class
       float norm = 1.0/float(sites*LH*LH*mpi_size);
+#ifdef SENSITIVITY
+#else
       for(h=0;h<(HEIGHT+1);h++) output_extended[6] << iter << "\t" << h*LV << "\t" << layer[h]*norm << "\n";
+#endif
     }
   }
 }
@@ -7372,6 +7408,9 @@ void UpdateTransmittanceCHM_ABC(float mean_beam, float sd_beam, float klaser, fl
 // Global ABC function: output general ABC statistics
 //##############################################
 void OutputABC(){
+#ifdef SENSITIVITY
+  return;
+#endif
   cout << " ABC: Conservation of Traits " << endl;
   OutputABCConservationTraits(output_abc[0]);
   cout << " ABC: Ground data " << endl;
@@ -7388,6 +7427,10 @@ void OutputABC(){
 // Global ABC function: write headers for ABC outputs
 //##############################################
 void OutputABCWriteHeaders(fstream& output_traitconservation, fstream& output_field, fstream& output_CHM, fstream& output_CHM_ALS, fstream& output_transmittance, fstream& output_transmittance_ALS, fstream& output_species, fstream& output_species10, fstream& output_traits, fstream& output_traits10, fstream& output_biomass){
+
+#ifdef SENSITIVITY
+  return;
+#endif
   //Write headers for trait conservation metrics
   output_traitconservation << "Iter\t" << "mean_ran\t" << "sd_ran\t" << "Height_output\t" << "Heightsd_output\t"  << "CR_output\t" << "CRsd_output\t" << "CD_output\t" << "CDsd_output\t" << "P_output\t" <<  "Psd_output\t" << "N_output\t" << "Nsd_output\t" << "LMA_output\t" << "LMAsd_output\t" << "wsg_output\t" << "wsgsd_output\t" << "dmax_output\t" << "dmaxsd_output\t" << "Height_input\t" << "Heightsd_input\t"  << "CR_input\t" << "CRsd_input\t" << "CD_input\t" << "CDsd_input\t" << "P_input\t" <<  "Psd_input\t" << "N_input\t" << "Nsd_input\t" << "LMA_input\t" << "LMAsd_input\t" << "wsg_input\t" << "wsgsd_input\t" << "dmax_input\t" << "dmaxsd_input" << endl;
   //Write headers for ground metrics
