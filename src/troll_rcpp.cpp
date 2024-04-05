@@ -4157,7 +4157,7 @@ void AssignValueGlobal(string parameter_name, string parameter_value){
   } else if(parameter_name == "mean_colonization_dist"){
     SetParameter(parameter_name, parameter_value, mean_colonization_dist, 0.0f, 1000.0f, 5.0f, quiet);
   } else if(parameter_name == "min_tree_colo_height"){
-    SetParameter(parameter_name, parameter_value, mean_colonization_dist, 0.0f, 100.0f, 5.0f, quiet);
+    SetParameter(parameter_name, parameter_value, min_tree_colo_height, 0.0f, 100.0f, 5.0f, quiet);
   } else if(parameter_name == "_LL_parameterization"){
     SetParameter(parameter_name, parameter_value, _LL_parameterization, bool(0), bool(1), bool(1), quiet);
   } else if(parameter_name == "_LA_regulation"){
@@ -4902,7 +4902,7 @@ void InitialiseOutputStreams(){
     output_basic[0].open(nnn, ios::out);
 #ifdef SENSITIVITY
     // write headers for files
-    output_basic[0] << "iter\tsum1\tsum10\tsum30\tba\tba10\tagb\tgpp\tnpp\trday\trnight\trstem\tlitterfall" << endl;
+    output_basic[0] << "iter\tsum10\tsum30\tagb\tgpp\twsg\tsimp\tldagb\tlclass0\tlclass1\tlclass2\tlclass3" << endl;
 #else
     snprintf(nnn,sizeof(nnn),"%s_%i_initial_pattern.txt",buf, easympi_rank); // previously "state" output, but not used anymore, overwritten for initial pattern
     output_basic[1].open(nnn, ios::out);
@@ -6207,7 +6207,45 @@ void Average(void){
 	L[site].l_stem[istem].ls_t.Average();
       }
     }
-      
+
+#ifdef SENSITIVITY
+    float ldagb=0.;
+    int count_lclass0=0;
+    int count_lclass1=0;
+    int count_lclass2=0;
+    int count_lclass3=0;
+    for(site=0;site<sites;site++){
+      for(int istem=0;istem<L[site].l_stem.size();istem++){
+        ldagb += L[site].l_stem[istem].ls_t.t_carbon_biometry*2.0;
+	int my_host=L[site].l_stem[istem].ls_host;
+	if(my_host >= 0){
+	  if(T[my_host].t_dbh>0.1 && S[T[my_host].t_sp_lab].s_growthform==0){
+	    float liana_la=L[site].l_stem[istem].ls_t.t_LA;
+	    float tree_la=T[my_host].t_LA;
+	    if(liana_la>tree_la){
+	      count_lclass3+=1;
+	    }else{
+	      if(liana_la>0.1*tree_la){
+		count_lclass2+=1;
+	      }else{
+		count_lclass1+=1;
+	      }
+	    }
+	  }
+	}
+      }
+      if(T[site].t_dbh>0.1 && S[T[site].t_sp_lab].s_growthform==0){
+	count_lclass0+=1;
+      }
+    }
+    count_lclass0 = count_lclass0 - count_lclass1 - count_lclass2 - count_lclass3;
+#endif
+    
+    float mean_wsg;
+    float inv_simp_ind;
+    mean_wsg=0.;
+    inv_simp_ind=0.;
+    
     for(spp=1;spp<=nbspp;spp++) {
       float s_sum1 = float(S[spp].s_nbind)*inbhectares;
       S[spp].s_sum10 *= inbhectares;
@@ -6237,6 +6275,8 @@ void Average(void){
       
       if(_OUTPUT_extended){
 #ifdef SENSITIVITY
+	mean_wsg += S[spp].s_wsg*S[spp].s_sum10;
+	inv_simp_ind += S[spp].s_sum10*S[spp].s_sum10;
 #else
         output_extended[0] << iter << "\t" << S[spp].s_name << "\t" << s_sum1 << "\t" << S[spp].s_sum10 << "\t" << S[spp].s_sum30 << "\t" << S[spp].s_ba << "\t" << S[spp].s_ba10 << "\t" << S[spp].s_agb << "\t" << S[spp].s_gpp << "\t" << S[spp].s_npp << "\t" << S[spp].s_rday << "\t" << S[spp].s_rnight << "\t" << S[spp].s_rstem << "\t" << S[spp].s_litterfall << endl;
 #endif
@@ -6244,6 +6284,11 @@ void Average(void){
     }
     
 #ifdef SENSITIVITY
+    if(sum10>0){
+      mean_wsg = mean_wsg / sum10;
+      inv_simp_ind = sum10*sum10/inv_simp_ind;
+    }
+    output_basic[0] << iter << "\t" << sum10 << "\t" << sum30 << "\t" << agb << "\t" << gpp << "\t" << mean_wsg << "\t" << inv_simp_ind << "\t" << ldagb*inbhectares << "\t" << count_lclass0 << "\t" << count_lclass1 << "\t" << count_lclass2 << "\t" << count_lclass3 << endl;
 #else
     output_basic[0] << iter << "\t" << sum1 << "\t" << sum10 << "\t" << sum30 << "\t" << ba << "\t" << ba10 << "\t" << agb << "\t" << gpp << "\t" << npp << "\t" << rday << "\t" << rnight << "\t" << rstem << "\t" << litterfall << endl;
 #endif
