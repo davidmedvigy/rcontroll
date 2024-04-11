@@ -56,6 +56,7 @@
 #undef CHECK_CARBON      //!< new in v.2.5: DIAGNOSTIC TOOL, checking of carbon budgets, could potentially be extended for nutrient budget checking in the future. The idea is to keep track of carbon stocks and carbon fluxes every timestep to see whether there are any deviations from expectations - to do so, differences between stocks are computed at each timestep, and can be compared to the gross and net assimilation of carbon
 
 #define SENSITIVITY // minimal set of output variables
+//#undef SENSITIVITY // minimal set of output variables
 
 // LIBRARIES
 #include <cstdio>
@@ -844,7 +845,7 @@ public:
   void Birth(int,int);    //!< Tree birth
   int BirthFromInventory(int site, vector<string> &parameter_names, vector<string> &parameter_values, int &nb_speciesrandom);  //!< Tree initialisation from field data, completely updated in v.3.1
   void Death();                   //!< Tree death, called by Tree::Update
-  void Growth(int ls_host);                  //!< Tree growth
+  void Growth(float &col_liana_dagb, int ls_host);                  //!< Tree growth
   void Fluxh(int h, float &PPFD, float &VPD, float &Tmp, float &leafarea_layer); //!< Computation of PPFD right above the tree -- called by Tree::Birth and Tree::Growth
   
 #ifdef WATER
@@ -927,10 +928,14 @@ public:
   int ls_host;
   Tree ls_t;
   int ls_site;
+  float ls_postcol_agb;
+  float ls_precol_agb;
   
   LianaStem(){
     ls_site=0;
     ls_host=-1;
+    ls_postcol_agb=0.0;
+    ls_precol_agb=0.0;
   };
 
   void Birth(int, int);
@@ -1146,6 +1151,8 @@ void LianaStem::ColonizeTree(){
 void LianaStem::Birth(int nume, int site0){
   ls_host=-1; // starts out as free-standing
   ls_site=site0; // First LianaStem occupies the same site as its Liana
+  ls_postcol_agb=0.0;
+  ls_precol_agb=0.0;
   ls_t.Birth(nume,site0);
 }
 
@@ -2659,12 +2666,13 @@ float Tree::predLeafLifespanKikuzawa(){
 //#############################################
 // Tree growth
 //#############################################
-void Tree::Growth(int ls_host=-1) {
+void Tree::Growth(float &col_liana_dagb, int ls_host=-1) {
   //update age
   t_age+= timestep;                               //new v.2.2: increments are not 1 yr, but the duration of the timestep (usually 1 or <1, i.e. 1/12 if monthly, 1/365 if daily
   
   //Set growth carbon to zero
   t_carbon_biometry = 0.0;
+  col_liana_dagb=0.0;
 #ifdef WATER
   t_transpiration=0.0;
 #endif
@@ -2728,7 +2736,11 @@ void Tree::Growth(int ls_host=-1) {
       //in future versions: build up a carbon pool as buffer for stress situations !!!UPDATE
       //NPP allocation to wood and tree size increment
       UpdateLeafDynamics();
-      if(S[t_sp_lab].s_growthform != 1 || ls_host<0)UpdateTreeBiometry();
+      if(S[t_sp_lab].s_growthform != 1 || ls_host<0){
+	UpdateTreeBiometry();
+      }else{
+	col_liana_dagb = 2 * t_carbon_biometry;
+      }
     }
   }
   
@@ -3136,8 +3148,9 @@ void Tree::Update() {
 #else
     death = int(gsl_rng_uniform(gslrng)+DeathRate(t_dbh, t_NPPneg));
 #endif
+    float col_ls_growth;
     if(death) Death();
-    else Growth();   // v.2.4: t_hurt is now updated in the TriggerTreefallSecondary() function
+    else Growth(col_ls_growth);   // v.2.4: t_hurt is now updated in the TriggerTreefallSecondary() function
   }
 }
 
@@ -3184,7 +3197,16 @@ void Liana::Update(){
 	  l_stem[istem].ls_t.t_LAI = l_stem[istem].ls_t.t_LA/crown_area_nogaps; // Just smearing the LA throughout the tree crown.
 	}
 	// Call the Growth function for free-standing and colonizing lianas.
-	(l_stem[istem].ls_t).Growth(l_stem[istem].ls_host);
+	float col_liana_dagb;
+	(l_stem[istem].ls_t).Growth(col_liana_dagb,l_stem[istem].ls_host);
+	if(l_stem[istem].ls_host>=0){
+	  l_stem[istem].ls_postcol_agb += (0.001*col_liana_dagb); // kg Biomass
+	  //cout << "Liana Test: " << col_liana_dagb << " " << l_stem[istem].ls_postcol_agb << endl;
+	  //exit(0);
+	}else{
+	  l_stem[istem].ls_precol_agb = l_stem[istem].ls_t.CalcAGB();
+	  l_stem[istem].ls_postcol_agb=0.;
+	}
       }
       l_age+=timestep;
     }else{
@@ -3940,6 +3962,13 @@ int main(int argc, char *argv[]
     if(_OUTPUT_pointcloud == 1 && iter == iter_pointcloud_generation && iter_pointcloud_generation > 0){
       ExportPointcloud(mean_beam_pc, sd_beam_pc, klaser_pc, transmittance_laser, output_pointcloud); // v.3.1.6
     }
+
+#ifdef SENSITIVITY
+#else
+    if(iter == 599 || iter == 1199 || iter == 1799 || iter == 2399 || iter == 2999){
+      OutputSnapshot(output_basic[1], 0, 0.01);                 // Final Pattern, for trees > 0.01m DBH
+    }
+#endif
     
 #ifdef Output_ABC
     int timespan_abc = 10 * iterperyear;     // every 10 years, modified in v.3.0
@@ -4902,7 +4931,7 @@ void InitialiseOutputStreams(){
     output_basic[0].open(nnn, ios::out);
 #ifdef SENSITIVITY
     // write headers for files
-    output_basic[0] << "iter\tsum10\tsum30\tagb\tgpp\twsg\tsimp\tldagb\tlclass0\tlclass1\tlclass2\tlclass3" << endl;
+    output_basic[0] << "iter\tsum10\tsum30\tagb\tgpp\twsg\tsimp\tlpostcolagb\tlprecolagb\tlallomagb\tlclass0\tlclass1\tlclass2\tlclass3" << endl;
 #else
     snprintf(nnn,sizeof(nnn),"%s_%i_initial_pattern.txt",buf, easympi_rank); // previously "state" output, but not used anymore, overwritten for initial pattern
     output_basic[1].open(nnn, ios::out);
@@ -6209,36 +6238,82 @@ void Average(void){
     }
 
 #ifdef SENSITIVITY
-    float ldagb=0.;
+    float liana_la[40000], tree_la[40000];
+    for(site=0;site<sites;site++){
+      liana_la[site] = 0;
+      tree_la[site] = 0;
+    }
+    for(site=0;site<sites;site++){
+      if(L[site].l_age>0){
+	for(int istem=0;istem<L[site].l_stem.size();istem++){
+	  int my_host=L[site].l_stem[istem].ls_host;
+	  if(my_host >= 0){
+	    if(T[my_host].t_dbh>0.1 && S[T[my_host].t_sp_lab].s_growthform==0){
+	      liana_la[my_host] = liana_la[my_host] + L[site].l_stem[istem].ls_t.t_LA;
+	    }
+	  }
+	}
+      }
+      if(T[site].t_age>0){
+	if(T[site].t_dbh>0.1 && S[T[site].t_sp_lab].s_growthform==0){
+	  tree_la[site] = tree_la[site] + T[site].t_LA;
+	}
+      }
+    }
+    float LA_rat,LA_sum;
     int count_lclass0=0;
     int count_lclass1=0;
     int count_lclass2=0;
     int count_lclass3=0;
     for(site=0;site<sites;site++){
-      for(int istem=0;istem<L[site].l_stem.size();istem++){
-        ldagb += L[site].l_stem[istem].ls_t.t_carbon_biometry*2.0;
-	int my_host=L[site].l_stem[istem].ls_host;
-	if(my_host >= 0){
-	  if(T[my_host].t_dbh>0.1 && S[T[my_host].t_sp_lab].s_growthform==0){
-	    float liana_la=L[site].l_stem[istem].ls_t.t_LA;
-	    float tree_la=T[my_host].t_LA;
-	    if(liana_la>tree_la){
-	      count_lclass3+=1;
-	    }else{
-	      if(liana_la>0.1*tree_la){
-		count_lclass2+=1;
-	      }else{
-		count_lclass1+=1;
-	      }
-	    }
+      if(T[site].t_dbh > 0.1 && S[T[site].t_sp_lab].s_growthform==0 && T[site].t_age > 0){
+	LA_sum = liana_la[site]+tree_la[site];
+	if(LA_sum > 0){
+	  LA_rat = liana_la[site] / LA_sum;
+	  if(LA_rat < 0.01)count_lclass0++;
+	  if(LA_rat >= 0.01 && LA_rat < 0.1)count_lclass1++;
+	  if(LA_rat >= 0.1 && LA_rat < 0.5)count_lclass2++;
+	  if(LA_rat >= 0.5)count_lclass3++;
+	}
+      }
+    }
+    //cout << "class0: " << count_lclass0 << " class1: " << count_lclass1 << " class2: " << count_lclass2 << " class3: " << count_lclass3 << endl;
+    
+    float liana_postcol_agb=0.; // Liana wood increment after colonization (can simply scale by a factor)
+    float liana_allom_agb=0.; // Colonizing liana AGB as computed by default allometries
+    float liana_precol_agb=0.; // Colonizing liana AGB just before colonization
+    // Colonizing Liana AGB = scalefac * liana_postcol_agb + liana_precol_agb
+    // Correction to agb: agb = agb - liana_allom_agb + colonizing liana agb
+    for(site=0;site<sites;site++){
+      if(L[site].l_age>0){
+	//cout << "Got Liana, site: " << site << " Age: " << L[site].l_age << endl;
+	for(int istem=0;istem<L[site].l_stem.size();istem++){
+	  int my_host=L[site].l_stem[istem].ls_host;
+	  if(my_host >= 0){
+	    //cout << "Got a host, site: " << my_host << " DBH: " << T[my_host].t_dbh << endl;
+	    liana_postcol_agb += L[site].l_stem[istem].ls_postcol_agb;
+	    liana_allom_agb += L[site].l_stem[istem].ls_t.CalcAGB();
+	    liana_precol_agb += L[site].l_stem[istem].ls_precol_agb;
+	    //if(T[my_host].t_dbh>0.1 && S[T[my_host].t_sp_lab].s_growthform==0){
+	    //float liana_la=L[site].l_stem[istem].ls_t.t_LA;
+	    //float tree_la=T[my_host].t_LA;
+	    //if(liana_la>tree_la){
+	    //	count_lclass3+=1;
+	    //}else{
+	    //	if(liana_la>0.1*tree_la){
+	    //	  count_lclass2+=1;
+	    //	}else{
+	    //	  count_lclass1+=1;
+	    //	}
+	    //}
+	    //cout << "Colonization: " << " Liana LA: " << liana_la << " Tree LA: " << tree_la << endl; 
+	    //}
 	  }
 	}
       }
-      if(T[site].t_dbh>0.1 && S[T[site].t_sp_lab].s_growthform==0){
-	count_lclass0+=1;
-      }
+      //if(T[site].t_dbh>0.1 && S[T[site].t_sp_lab].s_growthform==0)count_lclass0+=1;
     }
-    count_lclass0 = count_lclass0 - count_lclass1 - count_lclass2 - count_lclass3;
+    //count_lclass0 = count_lclass0 - count_lclass1 - count_lclass2 - count_lclass3;
 #endif
     
     float mean_wsg;
@@ -6288,7 +6363,7 @@ void Average(void){
       mean_wsg = mean_wsg / sum10;
       inv_simp_ind = sum10*sum10/inv_simp_ind;
     }
-    output_basic[0] << iter << "\t" << sum10 << "\t" << sum30 << "\t" << agb << "\t" << gpp << "\t" << mean_wsg << "\t" << inv_simp_ind << "\t" << ldagb*inbhectares << "\t" << count_lclass0 << "\t" << count_lclass1 << "\t" << count_lclass2 << "\t" << count_lclass3 << endl;
+    output_basic[0] << iter << "\t" << sum10 << "\t" << sum30 << "\t" << agb << "\t" << gpp << "\t" << mean_wsg << "\t" << inv_simp_ind << "\t" << liana_postcol_agb*inbhectares << "\t" << liana_precol_agb*inbhectares << "\t" << liana_allom_agb*inbhectares << "\t" << count_lclass0 << "\t" << count_lclass1 << "\t" << count_lclass2 << "\t" << count_lclass3 << endl;
 #else
     output_basic[0] << iter << "\t" << sum1 << "\t" << sum10 << "\t" << sum30 << "\t" << ba << "\t" << ba10 << "\t" << agb << "\t" << gpp << "\t" << npp << "\t" << rday << "\t" << rnight << "\t" << rstem << "\t" << litterfall << endl;
 #endif
