@@ -55,8 +55,8 @@
 #undef TRACK_INDIVIDUALS //!< new in v.2.5: DIAGNOSTIC TOOL, individual-based tracking of trees for PBA (process-based analytics, an accounting-like monitoring of model behavior through individual states and processes). PLEASE BE AWARE: onset of tracking is currently hardcoded to comprise trees born in year 501 in forest regeneration. Also: Filesizes can get VERY VERY LARGE if more trees are included.
 #undef CHECK_CARBON      //!< new in v.2.5: DIAGNOSTIC TOOL, checking of carbon budgets, could potentially be extended for nutrient budget checking in the future. The idea is to keep track of carbon stocks and carbon fluxes every timestep to see whether there are any deviations from expectations - to do so, differences between stocks are computed at each timestep, and can be compared to the gross and net assimilation of carbon
 
-#define SENSITIVITY // minimal set of output variables
-//#undef SENSITIVITY // minimal set of output variables
+//#define SENSITIVITY // minimal set of output variables
+#undef SENSITIVITY // minimal set of output variables
 
 // LIBRARIES
 #include <cstdio>
